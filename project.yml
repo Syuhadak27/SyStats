@@ -43,7 +43,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.systats.app
         PRODUCT_NAME: SyStats
         MARKETING_VERSION: 1.1.0
-        CURRENT_PROJECT_VERSION: 1
+        CURRENT_PROJECT_VERSION: 2
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # Info.plist ditulis manual (Config/Info.plist). Blok `info:` XcodeGen
         # mewajibkan `path:` dan itulah yang membuat `xcodegen generate` gagal.

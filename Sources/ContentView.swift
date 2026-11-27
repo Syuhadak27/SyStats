@@ -8,12 +8,9 @@ struct ContentView: View {
             DashboardView()
                 .tabItem { Label("Dashboard", systemImage: "gauge.with.dots.needle.67percent") }
                 .tag(0)
-            InspectorView()
-                .tabItem { Label("EFI & ACPI", systemImage: "doc.text.magnifyingglass") }
-                .tag(1)
             PreferencesView()
-                .tabItem { Label("Menu Bar", systemImage: "menubar.rectangle") }
-                .tag(2)
+                .tabItem { Label("Preferences", systemImage: "gearshape") }
+                .tag(1)
         }
         .frame(minWidth: 780, minHeight: 560)
     }

@@ -127,6 +127,30 @@ struct ThresholdCapability {
         if reasons.isEmpty { return status.label }
         return reasons.first ?? status.label
     }
+
+    /// Bahasa sehari-hari untuk user awam. Detail teknis tetap ada di
+    /// `summary`/`reasons`/`evidence` untuk dibuka di "Detail teknis".
+    var humanTitle: String {
+        switch status {
+        case .available: return "Batas cas bisa diatur"
+        case .restricted: return "Batas cas belum bisa diatur"
+        case .unavailable: return "Tidak tersedia di perangkat ini"
+        case .unknown: return "Belum terdeteksi"
+        }
+    }
+
+    var humanDetail: String {
+        switch status {
+        case .available:
+            return "YogaSMC sudah aktif. Tombol Apply akan memakai jalur ini."
+        case .restricted:
+            return "Status baterai terbaca, tapi belum ada jalur resmi untuk mengatur batas cas."
+        case .unavailable:
+            return "Perangkat pendukung tidak ditemukan di mesin ini."
+        case .unknown:
+            return "Pemeriksaan EFI berjalan otomatis. Bila tetap tidak terdeteksi, siapkan helper di Preferences."
+        }
+    }
 }
 
 struct EFIInspection {

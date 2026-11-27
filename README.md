@@ -92,7 +92,7 @@ Semua kode ada di satu folder `Sources/` agar ringkas:
 - `MenuBarItem.swift` — model item menu bar yang bisa diatur user.
 - `ACPIInspector.swift`, `ACPIParser.swift`, `EFIDetector.swift` — audit EFI (read-only).
 - `YogaSMCBridge.swift`, `ThresholdAdapters.swift`, `ThresholdController.swift` — jembatan ThinkVPC/EC + adapter write threshold.
-- `DashboardView.swift`, `InspectorView.swift`, `PreferencesView.swift`, `MenuBarPopoverView.swift`, `UIComponents.swift`, dll — GUI.
+- `DashboardView.swift`, `PreferencesView.swift`, `MenuBarPopoverView.swift`, `UIComponents.swift`, dll — GUI. Pemeriksaan EFI berjalan otomatis di belakang layar; tidak ada tab EFI lagi. Hasilnya hanya muncul sebagai status singkat di Dashboard dan detail teknis yang bisa dibuka bila perlu.
 
 Pemisahan penting:
 

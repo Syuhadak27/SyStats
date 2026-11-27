@@ -196,17 +196,43 @@ struct DashboardView: View {
 
     private var capabilityBanner: some View {
         let capability = appState.inspection.capability
-        return HStack(alignment: .top, spacing: 8) {
-            Image(systemName: capability.status == .available ? "checkmark.shield.fill" : "lock.shield")
-                .foregroundStyle(capability.status == .available ? .green : .orange)
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Write capability: \(capability.status.label) — \(capability.displayName)")
-                    .font(.caption.weight(.semibold))
-                Text(capability.summary)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+        let ok = capability.status == .available
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: ok ? "checkmark.circle.fill" : "info.circle.fill")
+                    .foregroundStyle(ok ? .green : .orange)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(capability.humanTitle)
+                        .font(.caption.weight(.semibold))
+                    Text(capability.humanDetail)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
+            DisclosureGroup("Detail teknis") {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Pemeriksaan EFI berjalan otomatis di belakang layar. File hanya dibaca, tidak diubah.")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                    Text("Adapter: \(capability.adapterID) · \(capability.displayName)")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    ForEach(capability.reasons, id: \.self) { reason in
+                        Text("• \(reason)").font(.caption2).foregroundStyle(.secondary)
+                    }
+                    ForEach(capability.evidence, id: \.self) { item in
+                        Text("• \(item)").font(.caption2).foregroundStyle(.tertiary)
+                    }
+                    if !appState.inspection.files.isEmpty {
+                        Text("File ACPI: \(appState.inspection.files.map(\.name).joined(separator: ", "))")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .padding(.top, 4)
+            }
+            .font(.caption2)
         }
         .padding(10)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))

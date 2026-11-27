@@ -186,8 +186,6 @@ struct PreferencesView: View {
                     .toggleStyle(.switch)
                 Toggle("Launch at login", isOn: loginBinding)
                     .toggleStyle(.switch)
-                Button("Rescan EFI folder") { appState.scanEFI() }
-                    .buttonStyle(.bordered)
             }
         }
     }
@@ -269,6 +267,34 @@ struct PreferencesView: View {
                 Text("Helper dipanggil: <path> <start%> <stop%>. Exit bukan 0 = gagal. Jalur ini tidak dipanggil berulang oleh timer reapply.")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
+                Divider()
+                VStack(alignment: .leading, spacing: 6) {
+                    SectionHeader(
+                        title: "Lokasi EFI",
+                        systemImage: "folder.badge.gearshape",
+                        subtitle: "Dipakai untuk pemeriksaan otomatis. File hanya dibaca, tidak diubah."
+                    )
+                    HStack {
+                        TextField("Otomatis (/Volumes/EFI/EFI)", text: efiPathBinding)
+                            .textFieldStyle(.roundedBorder)
+                        Button("Choose…") {
+                            if let url = FilePickers.chooseDirectory() {
+                                preferences.efiFolderPath = url.path
+                            }
+                        }
+                        Button("Periksa") { appState.scanEFI() }
+                            .buttonStyle(.borderless)
+                    }
+                    if let root = appState.inspection.efiRoot {
+                        Text("Terdeteksi: \(root.path)")
+                            .font(.caption2)
+                            .foregroundStyle(.green)
+                    } else {
+                        Text("Belum terdeteksi otomatis. Pilih folder EFI bila perlu.")
+                            .font(.caption2)
+                            .foregroundStyle(.orange)
+                    }
+                }
                 Button("Reset all preferences") {
                     let domain = Bundle.main.bundleIdentifier ?? "com.systats.app"
                     UserDefaults.standard.removePersistentDomain(forName: domain)
@@ -364,6 +390,9 @@ struct PreferencesView: View {
     }
     private var helperBinding: Binding<String> {
         Binding(get: { preferences.helperCommandPath }, set: { preferences.helperCommandPath = $0 })
+    }
+    private var efiPathBinding: Binding<String> {
+        Binding(get: { preferences.efiFolderPath }, set: { preferences.efiFolderPath = $0 })
     }
     private func pathBinding(_ keyPath: ReferenceWritableKeyPath<PreferencesStore, String>) -> Binding<String> {
         Binding(get: { preferences[keyPath: keyPath] }, set: { preferences[keyPath: keyPath] = $0 })

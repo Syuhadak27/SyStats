@@ -125,11 +125,11 @@ struct MenuBarPopoverView: View {
 
     private var statusFooter: some View {
         let capability = appState.inspection.capability
-        let fileCount = appState.inspection.files.count
+        let ok = capability.status == .available
         return HStack(alignment: .top, spacing: 6) {
-            Image(systemName: capability.status == .available ? "checkmark.shield" : "lock.shield")
-                .foregroundStyle(capability.status == .available ? .green : .orange)
-            Text("ACPI: \(fileCount) file(s) · Write: \(capability.status.label)")
+            Image(systemName: ok ? "checkmark.circle.fill" : "info.circle.fill")
+                .foregroundStyle(ok ? .green : .orange)
+            Text("Batas cas: \(capability.humanTitle.lowercased())")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
