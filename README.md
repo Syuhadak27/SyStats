@@ -108,7 +108,7 @@ Validasi: 0–100%, `stop > start`, gap minimal 5%, slider langkah 5%. App **tid
 
 ## 6. Build & Release via GitHub Actions
 
-Workflow: `.github/workflows/build-release.yml` (runner `macos-14`).
+Workflow: `.github/workflows/build-release.yml` (runner `macos-latest`, target macOS 13 Ventura ke atas). Deployment target: **macOS 13.0**.
 
 - Push `main`/`master`, PR, atau `workflow_dispatch` → build Release unsigned (`SyStats.app`) + upload artifact.
 - Push tag `v*` (mis. `v1.0.0`) → zip `SyStats-<tag>.zip`, buat `SHA256SUMS.txt`, **publikasikan GitHub Release**.
