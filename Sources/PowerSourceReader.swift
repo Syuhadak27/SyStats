@@ -132,7 +132,7 @@ enum PowerSourceReader {
 
     private static func string(_ dict: [String: Any], _ key: String) -> String? {
         if let value = dict[key] as? String { return value }
-        if let value = dict[key] as? CFString { return value as String }
+        if let value = dict[key] as? NSNumber { return value.stringValue }
         return nil
     }
 

@@ -57,7 +57,7 @@ enum SystemMonitor {
         guard total > 0 else { return nil }
         let pageSize = Double(getpagesize())
         let active = Double(stats.active_count) * pageSize
-        let wired = Double(stats.wired_count) * pageSize
+        let wired = Double(stats.wire_count) * pageSize
         let compressed = Double(stats.compressor_page_count) * pageSize
         let used = active + wired + compressed
         return Swift.min(Swift.max(used / total * 100.0, 0), 100)
