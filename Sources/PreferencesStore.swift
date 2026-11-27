@@ -25,7 +25,7 @@ final class PreferencesStore: ObservableObject {
     }
     /// Daftar item menu bar milik user — di-decode sekali dan di-cache supaya
     /// render/TextField tidak mengulang JSONDecoder tiap kali diakses.
-    @Published var menuBarItems: [MenuBarItem] {
+    @Published var menuBarItems: [MenuBarItem] = [] {
         didSet {
             if let data = try? JSONEncoder().encode(menuBarItems),
                let text = String(data: data, encoding: .utf8) {
@@ -159,11 +159,11 @@ final class PreferencesStore: ObservableObject {
         ecStopOffset = defaults.object(forKey: "ecStopOffset") as? Int ?? 0
         ecInhibitOffset = defaults.object(forKey: "ecInhibitOffset") as? Int ?? 0
 
-        // Setelah semua @Published ter-init, baru decode sekali ke cache.
-        // Pakai raw value yang sudah ada (bukan computed `menuBarMode`) supaya
-        // tidak mengakses `self` sebelum seluruh stored property ter-init.
-        let initialMode = MenuBarMode(rawValue: menuBarModeRaw) ?? .automatic
-        menuBarItems = Self.decodeItems(menuBarItemsRaw, mode: initialMode)
+        // Decode sekali ke cache. Semua nilai diambil dari `defaults` (bukan
+        // dari `self`) supaya tidak ada akses `self` sebelum init selesai.
+        let rawMode = defaults.string(forKey: "menuBarMode") ?? MenuBarMode.automatic.rawValue
+        let rawItems = defaults.string(forKey: "menuBarItems") ?? ""
+        menuBarItems = Self.decodeItems(rawItems, mode: MenuBarMode(rawValue: rawMode) ?? .automatic)
     }
 
     private func setLaunchAtLogin(_ enabled: Bool) {
