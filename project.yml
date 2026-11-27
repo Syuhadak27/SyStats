@@ -1,0 +1,54 @@
+name: SyStats
+
+options:
+  bundleIdPrefix: com.systats
+  deploymentTarget:
+    macOS: "12.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+settingGroups:
+  common:
+    SWIFT_VERSION: "5.7"
+    SWIFT_STRICT_CONCURRENCY: minimal
+    MACOSX_DEPLOYMENT_TARGET: "12.0"
+    CODE_SIGNING_ALLOWED: NO
+    CODE_SIGNING_REQUIRED: NO
+    CODE_SIGN_IDENTITY: "-"
+    ENABLE_HARDENED_RUNTIME: NO
+    CLANG_ENABLE_MODULES: YES
+    ALWAYS_SEARCH_USER_PATHS: NO
+
+targets:
+  SyStats:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources
+    resources:
+      - path: Assets.xcassets
+    links:
+      - framework: IOKit
+    settings:
+      groups: [common]
+      PRODUCT_BUNDLE_IDENTIFIER: com.systats.app
+      PRODUCT_NAME: SyStats
+      MARKETING_VERSION: 1.0.0
+      CURRENT_PROJECT_VERSION: 1
+      ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    info:
+      properties:
+        CFBundleDevelopmentRegion: en
+        CFBundleName: SyStats
+        CFBundleDisplayName: SyStats
+        LSApplicationCategoryType: public.app-category.utilities
+        LSUIElement: false
+        NSHighResolutionCapable: true
+        NSSupportsAutomaticTermination: false
+        NSSupportsSuddenTermination: false
+        NSHumanReadableCopyright: "SyStats — Hackintosh power telemetry & charge threshold tooling"
+    schemes:
+      SyStats:
+        build:
+          targets:
+            SyStats: [run, test, profile, analyze, archive]
