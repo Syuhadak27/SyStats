@@ -43,6 +43,16 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
             .sink { [weak self] _ in self?.updateTitle(self?.appState.telemetry.snapshot ?? TelemetrySnapshot()) }
             .store(in: &cancellables)
 
+        appState.preferences.$menuBarItemsRaw
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.updateTitle(self?.appState.telemetry.snapshot ?? TelemetrySnapshot()) }
+            .store(in: &cancellables)
+
+        appState.preferences.$menuBarSeparator
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.updateTitle(self?.appState.telemetry.snapshot ?? TelemetrySnapshot()) }
+            .store(in: &cancellables)
+
         appState.preferences.$compactMenuBar
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.updateTitle(self?.appState.telemetry.snapshot ?? TelemetrySnapshot()) }
@@ -82,7 +92,8 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     private func updateTitle(_ snapshot: TelemetrySnapshot) {
         guard let button = statusItem.button else { return }
         let text = snapshot.menuBarText(
-            mode: appState.preferences.menuBarMode,
+            items: appState.preferences.menuBarItems,
+            separator: appState.preferences.menuBarSeparator,
             compact: appState.preferences.compactMenuBar
         )
         button.title = text

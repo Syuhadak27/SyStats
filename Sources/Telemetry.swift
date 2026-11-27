@@ -112,22 +112,39 @@ struct TelemetrySnapshot {
         }
     }
 
-    /// Menu bar title. `compact` drops labels when the notch is crowded.
-    func menuBarText(mode: MenuBarMode, compact: Bool) -> String {
-        switch resolvedMode(preferred: mode) {
-        case .ac:
-            if compact {
-                return "\(voltageText) \(currentText) \(powerText)"
-            }
-            return "\(voltageText) \(currentText) \(powerText)"
-        case .battery:
-            if compact {
-                return "\(cpuText) \(ramText) \(fan.rpm.map { String(format: "%.0f", $0) + "rpm" } ?? "—") \(temperatureText)"
-            }
-            return "CPU \(cpuText) RAM \(ramText) \(fanText) \(temperatureText)"
-        case .automatic:
-            return ""
+    /// Teks nilai mentah untuk satu kind, tanpa label.
+    func valueText(for kind: MenuBarItem.Kind) -> String {
+        switch kind {
+        case .voltage: return voltageText
+        case .current: return currentText
+        case .power: return powerText
+        case .cpu: return cpuText
+        case .ram: return ramText
+        case .fan: return fanText
+        case .temperature: return temperatureText
+        case .battery: return batteryText
         }
+    }
+
+    /// Menu bar title. `compact` menyembunyikan semua label (nilai tetap tampil).
+    func menuBarText(mode: MenuBarMode, compact: Bool) -> String {
+        menuBarText(items: MenuBarItem.preset(for: mode), separator: " ", compact: compact)
+    }
+
+    /// Render menu bar dari daftar item milik user.
+    ///
+    /// - Label kosong = item tetap aktif, hanya labelnya yang disembunyikan.
+    /// - `compact` menyembunyikan semua label tanpa mengubah data user.
+    /// - Item yang `enabled == false` dilewati.
+    /// - Tidak ada batasan jumlah item.
+    func menuBarText(items: [MenuBarItem], separator: String, compact: Bool = false) -> String {
+        let parts: [String] = items.compactMap { item in
+            guard item.enabled else { return nil }
+            let value = valueText(for: item.kind)
+            let label = compact ? "" : item.label
+            return label.isEmpty ? value : "\(label) \(value)"
+        }
+        return parts.joined(separator: separator)
     }
 
     var menuBarAccessibilityLabel: String {

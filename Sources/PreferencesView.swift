@@ -18,33 +18,133 @@ struct PreferencesView: View {
         }
     }
 
-    // MARK: - Menu bar preview
+    // MARK: - Menu bar editor
 
     private var previewCard: some View {
         Card {
             VStack(alignment: .leading, spacing: 14) {
-                SectionHeader(title: "Menu bar preview", systemImage: "menubar.rectangle", subtitle: "Rendered from current telemetry in forced modes — not mock data")
-                HStack(spacing: 16) {
-                    previewTile(
-                        title: "AC plugged in",
-                        text: snapshot.menuBarText(mode: .ac, compact: preferences.compactMenuBar),
-                        color: .green,
-                        symbol: "bolt.fill"
-                    )
-                    previewTile(
-                        title: "On battery",
-                        text: snapshot.menuBarText(mode: .battery, compact: preferences.compactMenuBar),
-                        color: .orange,
-                        symbol: "battery.75"
-                    )
-                }
-                Picker("Menu bar mode", selection: modeBinding) {
+                SectionHeader(
+                    title: "Menu bar items",
+                    systemImage: "menubar.rectangle",
+                    subtitle: "Pilih, ubah label bebas, dan atur urutan item menu bar atas"
+                )
+
+                // Preset cepat. Mengubah preset menimpa daftar item saat ini.
+                Picker("Preset", selection: Binding(
+                    get: { preferences.menuBarModeRaw },
+                    set: { raw in
+                        preferences.applyMenuBarPreset(MenuBarMode(rawValue: raw) ?? .automatic)
+                    }
+                )) {
                     ForEach(MenuBarMode.allCases) { mode in
                         Text(mode.label).tag(mode.rawValue)
                     }
                 }
                 .pickerStyle(.segmented)
-                Toggle("Compact text (omit CPU/RAM labels)", isOn: compactBinding)
+
+                if preferences.menuBarItemsAreCustom {
+                    Label("Custom items aktif — memilih preset akan menimpanya.", systemImage: "hand.draw")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                }
+
+                // Live preview dari snapshot saat ini (bukan data palsu).
+                previewTile(
+                    title: "Live preview",
+                    text: snapshot.menuBarText(
+                        items: preferences.menuBarItems,
+                        separator: preferences.menuBarSeparator,
+                        compact: preferences.compactMenuBar
+                    ),
+                    color: .accentColor,
+                    symbol: "waveform.path.ecg"
+                )
+
+                HStack {
+                    Text("Separator").font(.caption)
+                    TextField("(spasi)", text: separatorBinding)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(maxWidth: 120)
+                    Text("Label kosong = nilai saja (item tetap aktif).")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+
+                // Daftar item: checkbox aktif, label bebas, drag untuk urutan.
+                List {
+                    ForEach(Array(preferences.menuBarItems.indices), id: \.self) { index in
+                        let item = preferences.menuBarItems[index]
+                        HStack(spacing: 8) {
+                            Image(systemName: "arrow.up.arrow.down.circle")
+                                .foregroundStyle(.tertiary)
+                                .help("Tarik baris untuk mengubah urutan")
+                            Toggle("", isOn: itemBinding(at: index).enabled)
+                                .toggleStyle(.checkbox)
+                                .labelsHidden()
+                            Image(systemName: item.kind.symbol)
+                                .foregroundStyle(.secondary)
+                                .frame(width: 18)
+                            TextField("Label (kosong = sembunyikan)", text: itemBinding(at: index).label)
+                                .textFieldStyle(.roundedBorder)
+                            Spacer(minLength: 4)
+                            Text(snapshot.valueText(for: item.kind))
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(item.enabled ? .primary : .secondary)
+                            Button {
+                                removeItem(item.id)
+                            } label: {
+                                Image(systemName: "trash")
+                                    .foregroundStyle(.red)
+                            }
+                            .buttonStyle(.borderless)
+                            .help("Hapus item")
+                        }
+                        .opacity(item.enabled ? 1 : 0.55)
+                    }
+                    .onMove { indices, newOffset in
+                        var items = preferences.menuBarItems
+                        items.move(fromOffsets: indices, toOffset: newOffset)
+                        preferences.menuBarItems = items
+                        preferences.markMenuBarItemsCustom()
+                    }
+                    .onDelete { indices in
+                        var items = preferences.menuBarItems
+                        items.remove(atOffsets: indices)
+                        preferences.menuBarItems = items
+                        preferences.markMenuBarItemsCustom()
+                    }
+                }
+                .listStyle(.plain)
+                .frame(height: 210)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(.quaternary, lineWidth: 1)
+                }
+
+                HStack {
+                    Text("Tarik baris untuk mengubah urutan.")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                    Menu {
+                        ForEach(MenuBarItem.Kind.allCases) { kind in
+                            Button {
+                                addItem(kind)
+                            } label: {
+                                Label(kind.displayName, systemImage: kind.symbol)
+                            }
+                        }
+                    } label: {
+                        Label("Tambah item", systemImage: "plus")
+                    }
+                    .buttonStyle(.bordered)
+                    Button("Reset ke preset") {
+                        preferences.applyMenuBarPreset(preferences.menuBarMode)
+                    }
+                    .buttonStyle(.borderless)
+                    Spacer()
+                }
+
+                Toggle("Compact text (sembunyikan semua label)", isOn: compactBinding)
                     .toggleStyle(.switch)
                 Toggle("Show menu bar icon", isOn: iconBinding)
                     .toggleStyle(.switch)
@@ -73,6 +173,20 @@ struct PreferencesView: View {
         .frame(maxWidth: .infinity)
         .padding(12)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private func addItem(_ kind: MenuBarItem.Kind) {
+        var items = preferences.menuBarItems
+        items.append(MenuBarItem(kind: kind))
+        preferences.menuBarItems = items
+        preferences.markMenuBarItemsCustom()
+    }
+
+    private func removeItem(_ id: UUID) {
+        var items = preferences.menuBarItems
+        items.removeAll { $0.id == id }
+        preferences.menuBarItems = items
+        preferences.markMenuBarItemsCustom()
     }
 
     // MARK: - Behavior
@@ -188,6 +302,9 @@ struct PreferencesView: View {
                     appState.preferences.efiFolderPath = ""
                     appState.preferences.pollInterval = 2.0
                     appState.preferences.menuBarMode = .automatic
+                    appState.preferences.menuBarItemsRaw = ""
+                    appState.preferences.menuBarSeparator = " "
+                    appState.preferences.menuBarItemsAreCustom = false
                     appState.preferences.compactMenuBar = false
                     appState.preferences.showMenuBarIcon = true
                     appState.preferences.thresholdEnabled = true
@@ -211,6 +328,42 @@ struct PreferencesView: View {
     private var modeBinding: Binding<String> {
         Binding(get: { preferences.menuBarModeRaw }, set: { preferences.menuBarModeRaw = $0 })
     }
+    private var separatorBinding: Binding<String> {
+        Binding(
+            get: { preferences.menuBarSeparator },
+            set: {
+                preferences.menuBarSeparator = $0
+                preferences.markMenuBarItemsCustom()
+            }
+        )
+    }
+
+    /// Binding aman untuk satu item berdasarkan index. Perubahan langsung
+    /// ditulis balik ke JSON preferences dan ditandai sebagai custom.
+    private func itemBinding(at index: Int) -> (enabled: Binding<Bool>, label: Binding<String>) {
+        let enabled = Binding<Bool>(
+            get: { preferences.menuBarItems[index].enabled },
+            set: { value in
+                var items = preferences.menuBarItems
+                guard items.indices.contains(index) else { return }
+                items[index].enabled = value
+                preferences.menuBarItems = items
+                preferences.markMenuBarItemsCustom()
+            }
+        )
+        let label = Binding<String>(
+            get: { preferences.menuBarItems[index].label },
+            set: { value in
+                var items = preferences.menuBarItems
+                guard items.indices.contains(index) else { return }
+                items[index].label = value
+                preferences.menuBarItems = items
+                preferences.markMenuBarItemsCustom()
+            }
+        )
+        return (enabled, label)
+    }
+
     private var compactBinding: Binding<Bool> {
         Binding(get: { preferences.compactMenuBar }, set: { preferences.compactMenuBar = $0 })
     }

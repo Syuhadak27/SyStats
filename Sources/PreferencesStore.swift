@@ -18,6 +18,18 @@ final class PreferencesStore: ObservableObject {
     @Published var menuBarModeRaw: String {
         didSet { defaults.set(menuBarModeRaw, forKey: "menuBarMode") }
     }
+    /// Daftar item menu bar milik user, dipersisten sebagai JSON.
+    @Published var menuBarItemsRaw: String {
+        didSet { defaults.set(menuBarItemsRaw, forKey: "menuBarItems") }
+    }
+    /// Pemisah antar item di menu bar. Bebas, bisa kosong atau multi-karakter.
+    @Published var menuBarSeparator: String {
+        didSet { defaults.set(menuBarSeparator, forKey: "menuBarSeparator") }
+    }
+    /// true setelah user mengubah daftar item secara manual (bukan dari preset).
+    @Published var menuBarItemsAreCustom: Bool {
+        didSet { defaults.set(menuBarItemsAreCustom, forKey: "menuBarItemsAreCustom") }
+    }
     @Published var compactMenuBar: Bool {
         didSet { defaults.set(compactMenuBar, forKey: "compactMenuBar") }
     }
@@ -89,10 +101,43 @@ final class PreferencesStore: ObservableObject {
         set { menuBarModeRaw = newValue.rawValue }
     }
 
+    var menuBarItems: [MenuBarItem] {
+        get {
+            guard let data = menuBarItemsRaw.data(using: .utf8),
+                  let decoded = try? JSONDecoder().decode([MenuBarItem].self, from: data),
+                  !decoded.isEmpty else {
+                return MenuBarItem.preset(for: menuBarMode)
+            }
+            return decoded
+        }
+        set {
+            let items = newValue
+            if let data = try? JSONEncoder().encode(items),
+               let text = String(data: data, encoding: .utf8) {
+                menuBarItemsRaw = text
+            }
+        }
+    }
+
+    /// Terapkan preset: menimpa daftar item dengan kombinasi bawaan mode.
+    func applyMenuBarPreset(_ mode: MenuBarMode) {
+        menuBarMode = mode
+        menuBarItems = MenuBarItem.preset(for: mode)
+        menuBarItemsAreCustom = false
+    }
+
+    /// Tandai bahwa user mengubah daftar item secara manual.
+    func markMenuBarItemsCustom() {
+        menuBarItemsAreCustom = true
+    }
+
     init() {
         efiFolderPath = defaults.string(forKey: "efiFolderPath") ?? ""
         pollInterval = defaults.object(forKey: "pollInterval") as? Double ?? 2.0
         menuBarModeRaw = defaults.string(forKey: "menuBarMode") ?? MenuBarMode.automatic.rawValue
+        menuBarItemsRaw = defaults.string(forKey: "menuBarItems") ?? ""
+        menuBarSeparator = defaults.string(forKey: "menuBarSeparator") ?? " "
+        menuBarItemsAreCustom = defaults.object(forKey: "menuBarItemsAreCustom") as? Bool ?? false
         compactMenuBar = defaults.object(forKey: "compactMenuBar") as? Bool ?? false
         showMenuBarIcon = defaults.object(forKey: "showMenuBarIcon") as? Bool ?? true
         hideDockIcon = defaults.object(forKey: "hideDockIcon") as? Bool ?? false
