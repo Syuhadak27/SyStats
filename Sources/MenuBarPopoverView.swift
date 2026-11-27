@@ -30,6 +30,14 @@ struct MenuBarPopoverView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
+            Button {
+                UpdateController.shared.checkForUpdates()
+            } label: {
+                Label("Check for Updates…", systemImage: "arrow.triangle.2.circlepath")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderless)
+            .help("Cek rilis terbaru di GitHub Releases (v\(UpdateController.shared.currentVersion))")
         }
         .padding(14)
         .frame(width: 330)

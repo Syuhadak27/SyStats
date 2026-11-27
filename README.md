@@ -210,7 +210,20 @@ Langkah CI: `xcodegen generate --spec project.yml --project .` → `xcodebuild -
 
 ---
 
-## 8. Catatan keamanan
+## 8. Update otomatis (Sparkle 2)
+
+Aplikasi memeriksa update dari GitHub Releases lewat [Sparkle 2](https://sparkle-project.org):
+
+- Feed: [`appcast.xml`](appcast.xml) di branch `main`.
+- Tanda tangan Ed25519 — public key ada di `Config/Info.plist` (`SUPublicEDKey`).
+- Cek otomatis tiap 24 jam, atau manual lewat **Check for Updates…** di popover menu bar.
+- **Setiap push tag `v*`** otomatis: build → upload release → tanda tangani zip → **menulis item terbaru ke `appcast.xml`** dan commit balik ke `main`.
+
+Lihat [`UPDATING.md`](UPDATING.md) untuk men-set GitHub Secret `SPARKLE_PRIVATE_KEY` dan alur rilis lengkap.
+
+---
+
+## 9. Catatan keamanan
 
 - EFI diperlakukan **read-first**: tidak ada kode yang menulis `.aml`/`.dsl`/`config.plist`, dan folder EFI tidak ikut commit.
 - SMC/EC write hanya terjadi setelah tombol **Apply** ditekan pada adapter yang dipilih pengguna.
@@ -220,7 +233,7 @@ Langkah CI: `xcodegen generate --spec project.yml --project .` → `xcodebuild -
 
 ---
 
-## 9. Lisensi
+## 10. Lisensi
 
 [MIT License with Attribution Requirement](LICENSE) — © 2026 Syuhadak27.
 

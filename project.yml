@@ -1,5 +1,10 @@
 name: SyStats
 
+packages:
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: 2.10.1
+
 options:
   bundleIdPrefix: com.systats
   deploymentTarget:
@@ -37,6 +42,7 @@ targets:
     # Pengganti `links:` (bukan key XcodeGen yang valid).
     dependencies:
       - sdk: IOKit.framework
+      - package: Sparkle
     settings:
       groups: [common]
       base:

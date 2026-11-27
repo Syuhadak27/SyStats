@@ -15,3 +15,9 @@ DerivedData/
 *.xcuserdatad/
 xcuserdata/
 *.zip
+
+# Sparkle signing material — NEVER commit private keys
+.sparkle-tools/
+private-key*.txt
+priv.pem
+*.tar.xz

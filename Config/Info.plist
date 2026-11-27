@@ -38,5 +38,15 @@
 	<false/>
 	<key>NSSupportsSuddenTermination</key>
 	<false/>
+
+	<!-- Sparkle 2 update feed & Ed25519 public key -->
+	<key>SUFeedURL</key>
+	<string>https://raw.githubusercontent.com/Syuhadak27/SyStats/main/appcast.xml</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
+	<key>SUPublicEDKey</key>
+	<string>lwa3VXTn37vZhKHnHWPpPWbGfhsty9lp9xNtNWTseDk=</string>
 </dict>
 </plist>
