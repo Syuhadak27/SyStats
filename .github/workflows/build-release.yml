@@ -10,6 +10,11 @@ on:
 
 permissions:
   contents: write
+  issues: write
+
+env:
+  APP_NAME: SyStats
+  BUILD_DIR: build/Build/Products/Release
 
 jobs:
   build:
@@ -20,6 +25,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Toolchain info
         run: |
@@ -50,6 +57,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           exit $code
 
+      # Pola build ini yang terbukti jalan di BatteryLenovoAssistent.
       - name: Build (Release, universal x86_64 + arm64)
         run: |
           set -o pipefail
@@ -57,24 +65,48 @@ jobs:
             -project SyStats.xcodeproj \
             -scheme SyStats \
             -configuration Release \
-            -destination 'generic/platform=macOS' \
+            -destination 'platform=macOS' \
             -derivedDataPath build \
-            ARCHS="x86_64 arm64" \
+            -quiet \
+            MACOSX_DEPLOYMENT_TARGET=13.0 \
+            CODE_SIGN_IDENTITY=- \
+            DEVELOPMENT_TEAM= \
+            CODE_SIGN_STYLE=Manual \
+            PROVISIONING_PROFILE_SPECIFIER= \
             ONLY_ACTIVE_ARCH=NO \
+            ARCHS='x86_64 arm64' \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
             build 2>&1 | tee xcodebuild.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            {
+              echo "## xcodebuild failed (exit $status)"
+              echo '```'
+              grep -E "error:|fatal error:|\*\* BUILD FAILED" xcodebuild.log | sort -u | head -80
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit "$status"
+          fi
 
-      - name: Show compiler errors (only on failure)
+      - name: Kirim log error ke Issue (hanya saat gagal)
         if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           {
-            echo "### Compiler errors"
+            echo "Build gagal pada run #${{ github.run_number }}."
+            echo ""
+            echo "Log: ${RUN_URL}"
+            echo ""
             echo '```'
-            grep -E "error:|fatal error:|\*\* BUILD FAILED" xcodebuild.log | sort -u | head -60 || true
+            grep -E "error:|fatal error:|\*\* BUILD FAILED" xcodebuild.log | sort -u | head -80 || true
             echo '```'
-          } | tee -a "$GITHUB_STEP_SUMMARY"
+          } > failure-body.md
+          gh issue create \
+            --title "CI build failure run #${{ github.run_number }}" \
+            --body-file failure-body.md || true
 
       - name: Upload build log
         if: always()
@@ -82,54 +114,34 @@ jobs:
         with:
           name: xcodebuild-log-${{ github.run_number }}
           path: xcodebuild.log
+          retention-days: 7
           if-no-files-found: ignore
 
       - name: Verify app bundle
         run: |
-          APP="build/Build/Products/Release/SyStats.app"
+          APP="${BUILD_DIR}/${APP_NAME}.app"
           test -d "$APP"
-          test -x "$APP/Contents/MacOS/SyStats"
-          test -f "$APP/Contents/Info.plist"
+          test -x "$APP/Contents/MacOS/${APP_NAME}"
           test -f "$APP/Contents/Resources/Assets.car"
-          echo "Architectures: $(lipo -archs "$APP/Contents/MacOS/SyStats")"
-          lipo -archs "$APP/Contents/MacOS/SyStats" | grep -q x86_64
-          plutil -p "$APP/Contents/Info.plist" | head -30
+          echo "Architectures: $(lipo -archs "$APP/Contents/MacOS/${APP_NAME}")"
+          lipo -archs "$APP/Contents/MacOS/${APP_NAME}" | grep -q x86_64
 
-      # Ad-hoc signature: tanpa Apple Developer ID, tapi membuat bundle valid
-      # sehingga Gatekeeper menawarkan "Open" lewat klik kanan (bukan "rusak").
       - name: Ad-hoc codesign
         run: |
-          APP="build/Build/Products/Release/SyStats.app"
+          APP="${BUILD_DIR}/${APP_NAME}.app"
           xattr -cr "$APP"
           codesign --force --deep --sign - --timestamp=none "$APP"
-          codesign --verify --deep --strict --verbose=2 "$APP"
-          codesign -dv "$APP" 2>&1 | head -10
+          codesign --verify --deep --strict "$APP"
 
-      # upload-artifact membuang permission file (bit executable). Karena itu
-      # .app TIDAK boleh diunggah mentah; bungkus dulu dengan ditto / hdiutil.
       - name: Package (zip + dmg)
         run: |
-          APP="build/Build/Products/Release/SyStats.app"
-          NAME="SyStats-${GITHUB_REF_NAME//\//-}"
-          mkdir -p release dmgroot
-          ditto -c -k --sequesterRsrc --keepParent "$APP" "release/${NAME}.zip"
-
-          ditto "$APP" "dmgroot/SyStats.app"
-          ln -s /Applications dmgroot/Applications
-          cat > "dmgroot/CARA BUKA.txt" <<'EOF'
-          SyStats - cara membuka (tanpa Terminal)
-
-          1. Seret SyStats.app ke folder Applications.
-          2. Buka Applications, KLIK KANAN SyStats.app, pilih "Open", lalu klik "Open" lagi.
-          3. Cukup sekali. Berikutnya bisa dibuka seperti biasa.
-
-          macOS 15 (Sequoia) ke atas:
-          Setelah percobaan pertama ditolak, buka
-          System Settings > Privacy & Security, gulir ke bawah,
-          klik "Open Anyway" di samping SyStats, lalu "Open".
-          EOF
-          hdiutil create -volname "SyStats" -srcfolder dmgroot -ov -format UDZO "release/${NAME}.dmg"
-
+          set -euo pipefail
+          NAME="${APP_NAME}-${{ github.ref_name }}"
+          mkdir -p release dmg-staging
+          ditto -c -k --sequesterRsrc --keepParent "${BUILD_DIR}/${APP_NAME}.app" "release/${NAME}.zip"
+          cp -R "${BUILD_DIR}/${APP_NAME}.app" dmg-staging/
+          ln -s /Applications dmg-staging/Applications
+          hdiutil create -volname "SyStats" -srcfolder dmg-staging -ov -format UDZO "release/${NAME}.dmg"
           (cd release && shasum -a 256 *.zip *.dmg > SHA256SUMS.txt && cat SHA256SUMS.txt)
 
       - name: Upload build artifact
@@ -138,6 +150,7 @@ jobs:
           name: SyStats-${{ github.sha }}
           path: release/*
           if-no-files-found: error
+          retention-days: 90
 
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
@@ -148,13 +161,8 @@ jobs:
           body: |
             ## SyStats (${{ github.ref_name }})
 
-            Native macOS app untuk Hackintosh: inspector EFI/ACPI read-only, telemetri menu bar dinamis, dan adapter charge-threshold modular. Universal (Intel x86_64 + Apple Silicon).
+            Native macOS app untuk Hackintosh: inspector EFI/ACPI read-only, telemetri menu bar dinamis, dan adapter charge-threshold modular. Universal (Intel x86_64 + Apple Silicon), macOS 13 Ventura ke atas.
 
-            **Cara membuka (tanpa Terminal):** seret `SyStats.app` ke Applications → klik kanan → **Open** → **Open**.
-            Di macOS 15+: System Settings → Privacy & Security → **Open Anyway**.
-
-            Build ini ad-hoc signed (tanpa Apple Developer ID), jadi peringatan Gatekeeper pertama kali normal.
-
-            Lihat README.md untuk path EFI, asumsi SMC key, dan diagnostik adapter.
+            Unduh `.dmg`, seret `SyStats.app` ke Applications, klik kanan → **Open**. Atau pakai `.zip`. Cek hash di `SHA256SUMS.txt`.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
