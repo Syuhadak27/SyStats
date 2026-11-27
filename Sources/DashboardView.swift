@@ -76,7 +76,7 @@ struct DashboardView: View {
     private var telemetryGrid: some View {
         Card {
             VStack(alignment: .leading, spacing: 12) {
-                SectionHeader(title: "Live telemetry", systemImage: "waveform.path.ecg", subtitle: "Polling every \(appState.preferences.pollInterval, specifier: "%.1f") s")
+                SectionHeader(title: "Live telemetry", systemImage: "waveform.path.ecg", subtitle: String(format: "Polling every %.1f s", appState.preferences.pollInterval))
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
                     StatTile(label: "Voltage", value: snapshot.voltageText, detail: snapshot.electrical.voltageSource, accent: .cyan)
                     StatTile(label: "Current", value: snapshot.currentText, detail: snapshot.electrical.currentSource, accent: .blue)
