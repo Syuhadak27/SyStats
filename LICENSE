@@ -1,0 +1,39 @@
+MIT License with Attribution Requirement
+
+Copyright (c) 2026 Syuhadak27
+
+Repository: https://github.com/Syuhadak27/SyStats
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, subject to the following conditions:
+
+1. The above copyright notice, this permission notice, and the repository
+   URL (https://github.com/Syuhadak27/SyStats) SHALL be included in all
+   copies or substantial portions of the Software.
+
+2. ANY MODIFICATION of the Software — including forks, derivative works,
+   redistributed builds, and modified source files — MUST prominently
+   credit the original repository by stating:
+
+       "Based on SyStats — https://github.com/Syuhadak27/SyStats"
+
+   This credit MUST appear in at least one of the following locations:
+   - the modified source file's header comment,
+   - the distribution's README / documentation,
+   - the application's About screen or credits,
+   - the release notes of the derived build.
+
+3. The repository URL MUST NOT be removed, obscured, or replaced with an
+   attribution to a different project when the Software (or a derivative)
+   is redistributed.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

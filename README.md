@@ -7,7 +7,7 @@
 [![Build & Release](https://github.com/Syuhadak27/SyStats/actions/workflows/build-release.yml/badge.svg)](https://github.com/Syuhadak27/SyStats/actions/workflows/build-release.yml)
 [![Release](https://img.shields.io/github/v/release/Syuhadak27/SyStats?display_name=tag&style=flat-square)](https://github.com/Syuhadak27/SyStats/releases)
 [![macOS 13+](https://img.shields.io/badge/macOS-13%20Ventura%2B-blue?style=flat-square)](https://github.com/Syuhadak27/SyStats)
-[![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
+[![License: MIT + Attribution](https://img.shields.io/badge/license-MIT%20%2B%20attribution-green?style=flat-square)](LICENSE)
 
 **Read-only EFI/ACPI audit · live power telemetry · modular charge-threshold adapters · fully customizable menu bar**
 
@@ -217,3 +217,15 @@ Langkah CI: `xcodegen generate --spec project.yml --project .` → `xcodebuild -
 - Semua asumsi key SMC/ACPI terdokumentasi di komentar kode dan di GUI sebagai diagnostik.
 - Label menu bar murni kosmetik; tidak pernah mengubah sumber atau satuan nilai.
 - Preview menu bar memakai telemetri aktual, bukan angka contoh yang disajikan sebagai data live.
+
+---
+
+## 9. Lisensi
+
+[MIT License with Attribution Requirement](LICENSE) — © 2026 Syuhadak27.
+
+Boleh digunakan, dimodifikasi, dan didistribusikan ulang, **dengan syarat wajib mencantumkan repo asal**:
+
+> Based on SyStats — https://github.com/Syuhadak27/SyStats
+
+Atribusi harus muncul di header file yang dimodifikasi, README/docs distribusi, layar About/credits, atau release notes. Lihat [LICENSE](LICENSE) untuk ketentuan lengkap.
