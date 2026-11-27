@@ -1,24 +1,73 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" ?>
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+  
+  
   <channel>
+    
+    
     <title>SyStats Updates</title>
+    
+    
     <link>https://github.com/Syuhadak27/SyStats/releases</link>
+    
+    
     <description>Live power telemetry &amp; charge threshold tooling for Hackintosh</description>
+    
+    
     <language>en</language>
+    
+    
     <item>
+      <title>Version 1.3.1</title>
+      <pubDate>Fri, 27 Nov 2026 23:57:20 +0000</pubDate>
+      <enclosure url="https://github.com/Syuhadak27/SyStats/releases/download/v1.3.1/SyStats-v1.3.1.zip" sparkle:version="6" sparkle:shortVersionString="1.3.1" sparkle:edSignature="zC1S+nzfVGYLBMxbLESUmjx0PLy1+AZTYbVrzsSV4OcZTJE0BO9/tf3M9FGM3uKe+iUFq7Ngz3IXeVfQBeyADw==" type="application/octet-stream" length="4402520"/>
+    </item>
+    <item>
+      
+      
       <title>Version 1.3.0</title>
+      
+      
       <pubDate>Fri, 27 Nov 2026 23:21:36 +0000</pubDate>
-      <enclosure url="https://github.com/Syuhadak27/SyStats/releases/download/v1.3.0/SyStats-v1.3.0.zip" sparkle:version="5" sparkle:shortVersionString="1.3.0" sparkle:edSignature="nNa3/XnHFJY6TWe9LHueQlkpmQ3ynl3HboQjLikDqjR6VrBh/SDVYwig1pnvlkaS+BHgEhYbOtRhh9E2ejSaAQ==" type="application/octet-stream" length="4402512" />
+      
+      
+      <enclosure url="https://github.com/Syuhadak27/SyStats/releases/download/v1.3.0/SyStats-v1.3.0.zip" sparkle:version="5" sparkle:shortVersionString="1.3.0" sparkle:edSignature="nNa3/XnHFJY6TWe9LHueQlkpmQ3ynl3HboQjLikDqjR6VrBh/SDVYwig1pnvlkaS+BHgEhYbOtRhh9E2ejSaAQ==" type="application/octet-stream" length="4402512"/>
+      
+    
     </item>
+    
+    
     <item>
+      
+      
       <title>Version 1.2.0</title>
+      
+      
       <pubDate>Sat, 28 Nov 2026 00:00:00 +0000</pubDate>
-      <enclosure url="https://github.com/Syuhadak27/SyStats/releases/download/v1.2.0/SyStats-v1.2.0.zip" sparkle:version="4" sparkle:shortVersionString="1.2.0" sparkle:edSignature="0tmDB6LQc//hJFawyhMmCWnSPCH+vnVo0JsYagCypcBLR5jrDOnl8QItcW2s74jwUy6PrRkv+p8pIOqxgaKqBw==" type="application/octet-stream" length="4362247" />
+      
+      
+      <enclosure url="https://github.com/Syuhadak27/SyStats/releases/download/v1.2.0/SyStats-v1.2.0.zip" sparkle:version="4" sparkle:shortVersionString="1.2.0" sparkle:edSignature="0tmDB6LQc//hJFawyhMmCWnSPCH+vnVo0JsYagCypcBLR5jrDOnl8QItcW2s74jwUy6PrRkv+p8pIOqxgaKqBw==" type="application/octet-stream" length="4362247"/>
+      
+    
     </item>
+    
+    
     <item>
+      
+      
       <title>Version 1.1.0</title>
+      
+      
       <pubDate>Sat, 28 Nov 2026 00:00:00 +0000</pubDate>
-      <enclosure url="https://github.com/Syuhadak27/SyStats/releases/download/v1.1.0/SyStats-v1.1.0.zip" sparkle:version="1" sparkle:shortVersionString="1.1.0" sparkle:edSignature="1/tksSRFGVHVivPDuVy3XP6eW26oC5zBLg3wdMDNeRi0kX+/U/aXZ4XBU87dbBgAIsBpq8t/DRjFMZSTvqgoCw==" type="application/octet-stream" length="3510935" />
+      
+      
+      <enclosure url="https://github.com/Syuhadak27/SyStats/releases/download/v1.1.0/SyStats-v1.1.0.zip" sparkle:version="1" sparkle:shortVersionString="1.1.0" sparkle:edSignature="1/tksSRFGVHVivPDuVy3XP6eW26oC5zBLg3wdMDNeRi0kX+/U/aXZ4XBU87dbBgAIsBpq8t/DRjFMZSTvqgoCw==" type="application/octet-stream" length="3510935"/>
+      
+    
     </item>
+    
+  
   </channel>
+  
+
 </rss>
