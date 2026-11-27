@@ -160,7 +160,10 @@ final class PreferencesStore: ObservableObject {
         ecInhibitOffset = defaults.object(forKey: "ecInhibitOffset") as? Int ?? 0
 
         // Setelah semua @Published ter-init, baru decode sekali ke cache.
-        menuBarItems = Self.decodeItems(menuBarItemsRaw, mode: menuBarMode)
+        // Pakai raw value yang sudah ada (bukan computed `menuBarMode`) supaya
+        // tidak mengakses `self` sebelum seluruh stored property ter-init.
+        let initialMode = MenuBarMode(rawValue: menuBarModeRaw) ?? .automatic
+        menuBarItems = Self.decodeItems(menuBarItemsRaw, mode: initialMode)
     }
 
     private func setLaunchAtLogin(_ enabled: Bool) {
