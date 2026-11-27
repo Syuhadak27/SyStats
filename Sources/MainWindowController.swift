@@ -25,7 +25,12 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     }
 
     private func makeWindow() -> NSWindow {
-        let rootView = ContentView().environmentObject(AppEnvironment.shared)
+        let state = AppEnvironment.shared
+        let rootView = ContentView()
+            .environmentObject(state)
+            .environmentObject(state.telemetry)
+            .environmentObject(state.thresholds)
+            .environmentObject(state.preferences)
         let controller = NSHostingController(rootView: rootView)
         let window = NSWindow(contentViewController: controller)
         window.title = "SyStats"

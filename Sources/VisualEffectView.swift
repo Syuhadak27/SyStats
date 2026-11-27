@@ -12,7 +12,10 @@ struct VisualEffectView: NSViewRepresentable {
         let view = NSVisualEffectView()
         view.material = material
         view.blendingMode = blendingMode
-        view.state = .active
+        // `.inactive` jauh lebih ringan daripada `.active`: tetap memberi
+        // efek blur statis tanpa terus-menerus mengomposit ulang saat
+        // window/telemetri berubah tiap beberapa detik.
+        view.state = .inactive
         view.wantsLayer = true
         view.layer?.cornerRadius = 14
         return view

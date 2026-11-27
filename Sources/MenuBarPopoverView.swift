@@ -2,15 +2,16 @@ import SwiftUI
 
 struct MenuBarPopoverView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var telemetry: TelemetryStore
+    @EnvironmentObject private var thresholds: ThresholdController
 
-    private var snapshot: TelemetrySnapshot { appState.telemetry.snapshot }
-    private var thresholds: ThresholdController { appState.thresholds }
+    private var snapshot: TelemetrySnapshot { telemetry.snapshot }
 
     private var startBinding: Binding<Int> {
-        Binding(get: { appState.thresholds.startPercent }, set: { appState.thresholds.startPercent = $0 })
+        Binding(get: { thresholds.startPercent }, set: { thresholds.startPercent = $0 })
     }
     private var stopBinding: Binding<Int> {
-        Binding(get: { appState.thresholds.stopPercent }, set: { appState.thresholds.stopPercent = $0 })
+        Binding(get: { thresholds.stopPercent }, set: { thresholds.stopPercent = $0 })
     }
 
     var body: some View {

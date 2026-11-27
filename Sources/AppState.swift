@@ -26,17 +26,15 @@ final class AppState: ObservableObject {
         telemetry = TelemetryStore()
         thresholds = ThresholdController(preferences: preferences)
 
-        // SwiftUI hanya mengamati AppState. Perubahan di objek bersarang
-        // (telemetry / thresholds / preferences) TIDAK otomatis memicu render
-        // ulang, sehingga dashboard & slider dulu "beku" setelah render pertama.
-        // Teruskan semua perubahan mereka ke objectWillChange milik AppState.
-        Publishers.Merge3(
-            telemetry.objectWillChange,
-            thresholds.objectWillChange,
-            preferences.objectWillChange
-        )
-        .sink { [weak self] _ in self?.objectWillChange.send() }
-        .store(in: &cancellables)
+        // Hanya preferensi yang diteruskan ke AppState.objectWillChange.
+        // Telemetry (2s) dan threshold (3s) publishing-Nya sengaja TIDAK
+        // diteruskan ke sini: kalau diteruskan, SETIAP tab (termasuk halaman
+        // Preferences yang sedang diedit) ikut render ulang tiap poll dan
+        // TextField terasa lag. View yang butuh telemetry/threshold mengamati
+        // objeknya langsung lewat @ObservedObject.
+        preferences.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
 
         NotificationCenter.default.addObserver(
             self, selector: #selector(handlePowerSourceChange),

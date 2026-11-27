@@ -2,9 +2,12 @@ import SwiftUI
 
 struct PreferencesView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var preferences: PreferencesStore
 
-    private var preferences: PreferencesStore { appState.preferences }
-    private var snapshot: TelemetrySnapshot { appState.telemetry.snapshot }
+    // TIDAK menyimpan/mengamati snapshot telemetri di sini. Live preview
+    // dipindah ke subview tersendiri yang mengamati TelemetryStore, supaya
+    // polling 2 detik tidak merender ulang seluruh halaman Preferences
+    // (terutama TextField label yang sedang diketik).
 
     var body: some View {
         ScrollView {
@@ -48,17 +51,9 @@ struct PreferencesView: View {
                         .foregroundStyle(.orange)
                 }
 
-                // Live preview dari snapshot saat ini (bukan data palsu).
-                previewTile(
-                    title: "Live preview",
-                    text: snapshot.menuBarText(
-                        items: preferences.menuBarItems,
-                        separator: preferences.menuBarSeparator,
-                        compact: preferences.compactMenuBar
-                    ),
-                    color: .accentColor,
-                    symbol: "waveform.path.ecg"
-                )
+                // Live preview diisolasi di subview agar update 2 detik tidak
+                // merender ulang TextField/List di halaman ini.
+                MenuBarPreviewView()
 
                 HStack {
                     Text("Separator").font(.caption)
@@ -87,9 +82,7 @@ struct PreferencesView: View {
                             TextField("Label (kosong = sembunyikan)", text: itemBinding(at: index).label)
                                 .textFieldStyle(.roundedBorder)
                             Spacer(minLength: 4)
-                            Text(snapshot.valueText(for: item.kind))
-                                .font(.caption.monospacedDigit())
-                                .foregroundStyle(item.enabled ? .primary : .secondary)
+                            LiveItemValue(kind: item.kind, enabled: item.enabled)
                             Button {
                                 removeItem(item.id)
                             } label: {
@@ -153,26 +146,6 @@ struct PreferencesView: View {
                     .foregroundStyle(.tertiary)
             }
         }
-    }
-
-    private func previewTile(title: String, text: String, color: Color, symbol: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: symbol).foregroundStyle(color)
-                Text(title).font(.caption.weight(.semibold))
-                Spacer()
-            }
-            Text(text.isEmpty ? "—" : text)
-                .font(.system(.body, design: .monospaced))
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(10)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        }
-        .frame(maxWidth: .infinity)
-        .padding(12)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private func addItem(_ kind: MenuBarItem.Kind) {
@@ -302,7 +275,7 @@ struct PreferencesView: View {
                     appState.preferences.efiFolderPath = ""
                     appState.preferences.pollInterval = 2.0
                     appState.preferences.menuBarMode = .automatic
-                    appState.preferences.menuBarItemsRaw = ""
+                    appState.preferences.menuBarItems = MenuBarItem.preset(for: .automatic)
                     appState.preferences.menuBarSeparator = " "
                     appState.preferences.menuBarItemsAreCustom = false
                     appState.preferences.compactMenuBar = false
@@ -409,5 +382,55 @@ struct PreferencesView: View {
                 preferences[keyPath: keyPath] = (1...0x99).contains(parsed) ? parsed : 0
             }
         )
+    }
+}
+
+/// Live preview diisolasi supaya hanya tile ini yang render ulang tiap poll
+/// 2 detik — bukan seluruh halaman Preferences yang sedang diedit user.
+private struct MenuBarPreviewView: View {
+    @EnvironmentObject private var telemetry: TelemetryStore
+    @EnvironmentObject private var preferences: PreferencesStore
+
+    var body: some View {
+        let text = telemetry.snapshot.menuBarText(
+            items: preferences.menuBarItems,
+            separator: preferences.menuBarSeparator,
+            compact: preferences.compactMenuBar
+        )
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: "waveform.path.ecg").foregroundStyle(Color.accentColor)
+                Text("Live preview").font(.caption.weight(.semibold))
+                Spacer()
+            }
+            Text(text.isEmpty ? "—" : text)
+                .font(.system(.body, design: .monospaced))
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(10)
+                // Solid fill, bukan material: jauh lebih murah saat dirender
+                // ulang tiap 2 detik.
+                .background(Color(nsColor: .controlBackgroundColor),
+                            in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(12)
+        .background(Color(nsColor: .windowBackgroundColor).opacity(0.6),
+                    in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+/// Nilai live per kind. Dipisah supaya perubahan telemetri tidak merender
+/// ulang baris TextField/checkbox di PreferencesView.
+private struct LiveItemValue: View {
+    @EnvironmentObject private var telemetry: TelemetryStore
+    let kind: MenuBarItem.Kind
+    let enabled: Bool
+
+    var body: some View {
+        Text(telemetry.snapshot.valueText(for: kind))
+            .font(.caption.monospacedDigit())
+            .foregroundStyle(enabled ? .primary : .secondary)
     }
 }

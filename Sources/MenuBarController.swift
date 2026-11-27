@@ -23,7 +23,10 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         // Angka lebar tetap supaya teks menu bar tidak "bergoyang" tiap update.
         button.font = NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize(for: .small), weight: .regular)
 
-        let rootView = MenuBarPopoverView().environmentObject(appState)
+        let rootView = MenuBarPopoverView()
+            .environmentObject(appState)
+            .environmentObject(appState.telemetry)
+            .environmentObject(appState.thresholds)
         let hosting = NSHostingController(rootView: rootView)
         hosting.preferredContentSize = NSSize(width: 330, height: 560)
         popover.contentViewController = hosting
@@ -43,7 +46,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
             .sink { [weak self] _ in self?.updateTitle(self?.appState.telemetry.snapshot ?? TelemetrySnapshot()) }
             .store(in: &cancellables)
 
-        appState.preferences.$menuBarItemsRaw
+        appState.preferences.$menuBarItems
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.updateTitle(self?.appState.telemetry.snapshot ?? TelemetrySnapshot()) }
             .store(in: &cancellables)

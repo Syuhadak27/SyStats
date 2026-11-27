@@ -18,9 +18,20 @@ final class PreferencesStore: ObservableObject {
     @Published var menuBarModeRaw: String {
         didSet { defaults.set(menuBarModeRaw, forKey: "menuBarMode") }
     }
-    /// Daftar item menu bar milik user, dipersisten sebagai JSON.
-    @Published var menuBarItemsRaw: String {
+    /// JSON persisten. TIDAK di-publish: perubahan difinalisasi lewat
+    /// `menuBarItems` (satu publish per perubahan, bukan dua).
+    private var menuBarItemsRaw: String {
         didSet { defaults.set(menuBarItemsRaw, forKey: "menuBarItems") }
+    }
+    /// Daftar item menu bar milik user — di-decode sekali dan di-cache supaya
+    /// render/TextField tidak mengulang JSONDecoder tiap kali diakses.
+    @Published var menuBarItems: [MenuBarItem] {
+        didSet {
+            if let data = try? JSONEncoder().encode(menuBarItems),
+               let text = String(data: data, encoding: .utf8) {
+                menuBarItemsRaw = text
+            }
+        }
     }
     /// Pemisah antar item di menu bar. Bebas, bisa kosong atau multi-karakter.
     @Published var menuBarSeparator: String {
@@ -101,22 +112,13 @@ final class PreferencesStore: ObservableObject {
         set { menuBarModeRaw = newValue.rawValue }
     }
 
-    var menuBarItems: [MenuBarItem] {
-        get {
-            guard let data = menuBarItemsRaw.data(using: .utf8),
-                  let decoded = try? JSONDecoder().decode([MenuBarItem].self, from: data),
-                  !decoded.isEmpty else {
-                return MenuBarItem.preset(for: menuBarMode)
-            }
-            return decoded
+    private static func decodeItems(_ raw: String, mode: MenuBarMode) -> [MenuBarItem] {
+        guard let data = raw.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode([MenuBarItem].self, from: data),
+              !decoded.isEmpty else {
+            return MenuBarItem.preset(for: mode)
         }
-        set {
-            let items = newValue
-            if let data = try? JSONEncoder().encode(items),
-               let text = String(data: data, encoding: .utf8) {
-                menuBarItemsRaw = text
-            }
-        }
+        return decoded
     }
 
     /// Terapkan preset: menimpa daftar item dengan kombinasi bawaan mode.
@@ -136,6 +138,7 @@ final class PreferencesStore: ObservableObject {
         pollInterval = defaults.object(forKey: "pollInterval") as? Double ?? 2.0
         menuBarModeRaw = defaults.string(forKey: "menuBarMode") ?? MenuBarMode.automatic.rawValue
         menuBarItemsRaw = defaults.string(forKey: "menuBarItems") ?? ""
+        menuBarItems = Self.decodeItems(menuBarItemsRaw, mode: menuBarMode)
         menuBarSeparator = defaults.string(forKey: "menuBarSeparator") ?? " "
         menuBarItemsAreCustom = defaults.object(forKey: "menuBarItemsAreCustom") as? Bool ?? false
         compactMenuBar = defaults.object(forKey: "compactMenuBar") as? Bool ?? false
