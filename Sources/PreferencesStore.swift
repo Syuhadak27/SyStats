@@ -138,7 +138,6 @@ final class PreferencesStore: ObservableObject {
         pollInterval = defaults.object(forKey: "pollInterval") as? Double ?? 2.0
         menuBarModeRaw = defaults.string(forKey: "menuBarMode") ?? MenuBarMode.automatic.rawValue
         menuBarItemsRaw = defaults.string(forKey: "menuBarItems") ?? ""
-        menuBarItems = Self.decodeItems(menuBarItemsRaw, mode: menuBarMode)
         menuBarSeparator = defaults.string(forKey: "menuBarSeparator") ?? " "
         menuBarItemsAreCustom = defaults.object(forKey: "menuBarItemsAreCustom") as? Bool ?? false
         compactMenuBar = defaults.object(forKey: "compactMenuBar") as? Bool ?? false
@@ -159,6 +158,9 @@ final class PreferencesStore: ObservableObject {
         ecStartOffset = defaults.object(forKey: "ecStartOffset") as? Int ?? 0
         ecStopOffset = defaults.object(forKey: "ecStopOffset") as? Int ?? 0
         ecInhibitOffset = defaults.object(forKey: "ecInhibitOffset") as? Int ?? 0
+
+        // Setelah semua @Published ter-init, baru decode sekali ke cache.
+        menuBarItems = Self.decodeItems(menuBarItemsRaw, mode: menuBarMode)
     }
 
     private func setLaunchAtLogin(_ enabled: Bool) {
