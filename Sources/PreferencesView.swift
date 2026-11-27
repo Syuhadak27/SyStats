@@ -197,6 +197,7 @@ struct PreferencesView: View {
                     appState.preferences.ecStopOffset = 0
                     appState.preferences.ecInhibitOffset = 0
                     appState.preferences.thresholdReapplyInterval = 3.0
+                    appState.preferences.thresholdAutoReapply = false
                     appState.preferences.helperCommandPath = ""
                     appState.scanEFI()
                 }

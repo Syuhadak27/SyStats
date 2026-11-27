@@ -15,8 +15,7 @@ Aplikasi desktop native macOS (SwiftUI + AppKit `NSStatusItem`) untuk Hackintosh
 .
 ├── Sources/              # semua file Swift (flat, satu folder saja)
 ├── Assets.xcassets/      # AppIcon + MenuBarIcon
-├── icon.png              # aset ikon utama (sumber ke dua-duanya)
-├── menu_bar.png          # turunan icon.png untuk menu bar
+├── Config/Info.plist     # Info.plist manual (dipakai project.yml)
 ├── project.yml           # spesifikasi XcodeGen
 ├── .github/workflows/    # build & release
 └── EFI/                  # REFERENSI LOKAL SAJA — diabaikan git, tidak ikut commit/push
@@ -37,7 +36,7 @@ Folder `EFI/` hanya contoh referensi dan **sengaja tidak ikut version control** 
 
 Semua kode ada di satu folder `Sources/` agar ringkas:
 - `SyStatsApp.swift`, `AppEnvironment.swift`, `AppState.swift` — entry & state bersama.
-- `AppDelegate.swift`, `MenuBarController.swift` — jembatan AppKit (`NSStatusItem`, popover).
+- `AppDelegate.swift`, `MenuBarController.swift`, `MainWindowController.swift` — jembatan AppKit (`NSStatusItem`, popover, jendela utama yang bisa dibuka ulang setelah ditutup).
 - `Telemetry*.swift`, `SMCReader.swift`, `PowerSourceReader.swift`, `SystemMonitor.swift`, `SensorReader.swift` — pembacaan sensor.
 - `ACPIInspector.swift`, `ACPIParser.swift`, `EFIDetector.swift` — audit EFI (read-only).
 - `YogaSMCBridge.swift`, `ThresholdAdapters.swift`, `ThresholdController.swift` — jembatan ThinkVPC/EC + adapter write threshold.
@@ -108,17 +107,23 @@ Validasi: 0–100%, `stop > start`, gap minimal 5%, slider langkah 5%. App **tid
 
 ## 6. Build & Release via GitHub Actions
 
-Workflow: `.github/workflows/build-release.yml` (runner `macos-latest`, target macOS 13 Ventura ke atas). Deployment target: **macOS 13.0**.
+Workflow: `.github/workflows/build-release.yml` (runner `macos-latest`). Deployment target: **macOS 13.0**. Hasil build **universal** (Intel `x86_64` + Apple Silicon `arm64`) dan **ad-hoc signed**.
 
-- Push `main`/`master`, PR, atau `workflow_dispatch` → build Release unsigned (`SyStats.app`) + upload artifact.
-- Push tag `v*` (mis. `v1.0.0`) → zip `SyStats-<tag>.zip`, buat `SHA256SUMS.txt`, **publikasikan GitHub Release**.
+- Push `main`/`master`, PR, atau `workflow_dispatch` → build Release + upload artifact (`SyStats-<tag>.zip`, `SyStats-<tag>.dmg`, `SHA256SUMS.txt`).
+- Push tag `v*` (mis. `v1.0.0`) → semua file di atas ikut dipublikasikan sebagai **GitHub Release**.
+- Jika build gagal, log lengkap tersedia sebagai artifact `xcodebuild-log-*` dan ringkasan error muncul di tab *Summary*.
 
-Langkah CI: `brew install xcodegen` → `xcodegen generate --spec project.yml --project SyStats.xcodeproj` → `xcodebuild -scheme SyStats -configuration Release CODE_SIGNING_ALLOWED=NO`.
+Langkah CI: `xcodegen generate --spec project.yml --project .` → `xcodebuild -scheme SyStats -configuration Release ARCHS="x86_64 arm64"` → verifikasi bundle → `codesign --sign -` (ad-hoc) → `ditto` zip + `hdiutil` dmg.
 
-Nama aplikasi setelah install adalah **SyStats**. Karena unsigned:
-```bash
-xattr -cr "/Applications/SyStats.app"
-```
+> Artifact GitHub membuang permission file, jadi `.app` tidak pernah diunggah mentah — selalu dibungkus zip/dmg dulu.
+
+### Cara membuka (tanpa Terminal)
+
+1. Unduh `.dmg` (atau `.zip`), seret **SyStats.app** ke **Applications**.
+2. **Klik kanan** SyStats.app → **Open** → **Open**. Cukup sekali.
+3. macOS 15 (Sequoia) ke atas: jika ditolak, buka **System Settings → Privacy & Security**, gulir ke bawah, klik **Open Anyway** di samping SyStats.
+
+(Opsional, hanya jika masih diblokir: `xattr -cr "/Applications/SyStats.app"`.)
 
 ---
 

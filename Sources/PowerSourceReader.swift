@@ -31,20 +31,28 @@ enum PowerSourceReader {
         var foundBattery = false
 
         for powerSource in list {
+            // "Get rule": IOPSGetPowerSourceDescription TIDAK mengembalikan objek
+            // yang di-retain. takeRetainedValue() di sini = over-release → crash
+            // (EXC_BAD_ACCESS) beberapa detik setelah app jalan di laptop.
             guard let dict = IOPSGetPowerSourceDescription(blob, powerSource)?
-                .takeRetainedValue() as? [String: Any] else { continue }
+                .takeUnretainedValue() as? [String: Any] else { continue }
             let state = string(dict, "Power Source State") ?? ""
             let type = string(dict, "Type") ?? ""
 
-            if state == "AC Power" || type == "AC" { foundAC = true }
+            if state == "AC Power" { foundAC = true }
 
-            let isBattery = state == "Battery Power" || type == "Battery"
+            // Saat charger terpasang, Type = "InternalBattery" dan state = "AC Power";
+            // cek lama (state == "Battery Power") membuat data baterai kosong saat charging.
+            let isBattery = type == "InternalBattery" || type == "Battery" || state == "Battery Power"
             if isBattery {
                 foundBattery = true
                 sample.battery.isPresent = true
                 sample.battery.chargePercent = percent(dict, "Current Capacity", "Max Capacity")
                 sample.battery.isCharging = bool(dict, "Is Charging")
-                sample.battery.timeRemainingMinutes = int(dict, "Time to Empty")
+                // -1 = macOS masih menghitung; jangan tampilkan sebagai menit.
+                let toEmpty = int(dict, "Time to Empty").flatMap { $0 >= 0 ? $0 : nil }
+                let toFull = int(dict, "Time to Full Charge").flatMap { $0 >= 0 ? $0 : nil }
+                sample.battery.timeRemainingMinutes = (sample.battery.isCharging == true) ? toFull : toEmpty
                 sample.battery.cycleCount = int(dict, "Cycle Count")
                 sample.battery.health = string(dict, "Battery Health")
                     ?? string(dict, "Battery Health Condition")

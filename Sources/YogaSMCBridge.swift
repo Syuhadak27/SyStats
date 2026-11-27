@@ -51,10 +51,7 @@ final class YogaSMCBridge {
     private let lock = NSLock()
     private var ecConnection: io_connect_t = 0
 
-    private var ioPort: mach_port_t {
-        if #available(macOS 12.0, *) { return kIOMainPortDefault }
-        return kIOMasterPortDefault
-    }
+    private var ioPort: mach_port_t { kIOMainPortDefault }
 
     deinit { closeECConnection() }
 
@@ -62,10 +59,7 @@ final class YogaSMCBridge {
 
     static func isThinkVPCAvailable() -> Bool {
         #if canImport(IOKit)
-        let port: mach_port_t
-        if #available(macOS 12.0, *) { port = kIOMainPortDefault }
-        else { port = kIOMasterPortDefault }
-        let service = IOServiceGetMatchingService(port, IOServiceMatching("ThinkVPC"))
+        let service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("ThinkVPC"))
         guard service != 0 else { return false }
         IOObjectRelease(service)
         return true

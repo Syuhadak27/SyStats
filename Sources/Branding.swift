@@ -13,7 +13,7 @@ enum AppBranding {
                 return Image(nsImage: image)
             }
         }
-        if let image = NSImage(named: "AppIcon") {
+        if let image = NSImage(named: "AppIcon") ?? NSApp?.applicationIconImage {
             return Image(nsImage: image)
         }
         return Image(systemName: "bolt.batteryblock.fill")

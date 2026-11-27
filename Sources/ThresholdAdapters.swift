@@ -200,7 +200,7 @@ struct ExternalHelperAdapter: ThresholdAdapting {
                 details: [path, "Jalankan chmod +x pada helper tersebut."]
             )
         }
-        return await Task.detached(priority: .utility) {
+        return await Task.detached(priority: .utility) { () -> ThresholdOperationResult in
             let process = Process()
             process.executableURL = URL(fileURLWithPath: path)
             process.arguments = [String(start), String(stop)]

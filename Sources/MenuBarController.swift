@@ -19,6 +19,9 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         button.target = self
         button.action = #selector(togglePopover(_:))
         button.toolTip = "SyStats — click for quick controls"
+        button.imagePosition = .imageLeft
+        // Angka lebar tetap supaya teks menu bar tidak "bergoyang" tiap update.
+        button.font = NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize(for: .small), weight: .regular)
 
         let rootView = MenuBarPopoverView().environmentObject(appState)
         let hosting = NSHostingController(rootView: rootView)
@@ -54,10 +57,6 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.updateIcon() }
             .store(in: &cancellables)
-
-        NotificationCenter.default.addObserver(
-            self, selector: #selector(openFullGUI), name: .openFullGUI, object: nil
-        )
     }
 
     private func updateIcon() {
@@ -95,16 +94,10 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         if popover.isShown {
             popover.performClose(sender)
         } else {
+            // App accessory/regular perlu diaktifkan agar popover menerima klik.
+            NSApp.activate(ignoringOtherApps: true)
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
-        }
-    }
-
-    @objc private func openFullGUI() {
-        appState.selectedTab = 0
-        NSApp.activate(ignoringOtherApps: true)
-        if let window = NSApp.windows.first(where: { $0.canBecomeKey }) {
-            window.makeKeyAndOrderFront(nil)
         }
     }
 }

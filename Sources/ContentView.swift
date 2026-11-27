@@ -16,8 +16,5 @@ struct ContentView: View {
                 .tag(2)
         }
         .frame(minWidth: 780, minHeight: 560)
-        .onReceive(NotificationCenter.default.publisher(for: .openFullGUI)) { _ in
-            appState.selectedTab = 0
-        }
     }
 }

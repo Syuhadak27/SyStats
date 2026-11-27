@@ -10,11 +10,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let controller = MenuBarController(appState: state)
         controller.setup()
         menuBarController = controller
+
+        // Mode "menu bar only" tidak membuka jendela saat start.
+        if !state.preferences.hideDockIcon {
+            MainWindowController.shared.show()
+        }
     }
 
     /// The app stays alive (menu bar) after the full GUI window is closed.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
+    }
+
+    /// Klik ikon Dock saat jendela tertutup/diminimalkan → tampilkan lagi.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag { MainWindowController.shared.show() }
+        return true
     }
 
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {

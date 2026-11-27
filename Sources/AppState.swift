@@ -26,6 +26,23 @@ final class AppState: ObservableObject {
         telemetry = TelemetryStore()
         thresholds = ThresholdController(preferences: preferences)
 
+        // SwiftUI hanya mengamati AppState. Perubahan di objek bersarang
+        // (telemetry / thresholds / preferences) TIDAK otomatis memicu render
+        // ulang, sehingga dashboard & slider dulu "beku" setelah render pertama.
+        // Teruskan semua perubahan mereka ke objectWillChange milik AppState.
+        Publishers.Merge3(
+            telemetry.objectWillChange,
+            thresholds.objectWillChange,
+            preferences.objectWillChange
+        )
+        .sink { [weak self] _ in self?.objectWillChange.send() }
+        .store(in: &cancellables)
+
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handlePowerSourceChange),
+            name: .powerSourceDidChange, object: nil
+        )
+
         restartPolling()
         startThresholdSync()
 
@@ -81,9 +98,10 @@ final class AppState: ObservableObject {
 
     // MARK: - Threshold sync (pola dari BatteryLenovoAssistent)
 
-    /// Timer 3 detik + observer IOKit saat charger cabut/colok. Semua tulisan
-    /// threshold dijalankan di background; tidak membanjiri EC karena adapter
-    /// hanya menulis byte yang berbeda (WE1B + read-back RE1B).
+    /// Timer (default 3 detik) + observer IOKit saat charger cabut/colok. Semua
+    /// tulisan threshold dijalankan di background dan HANYA aktif setelah
+    /// pengguna sendiri berhasil menekan Apply (`thresholdAutoReapply`).
+    /// Jalur Direct EC hanya menulis byte yang berbeda (WE1B + read-back RE1B).
     private func startThresholdSync() {
         thresholdTimer?.invalidate()
         let interval = min(max(preferences.thresholdReapplyInterval, 1.0), 30.0)
@@ -93,10 +111,8 @@ final class AppState: ObservableObject {
         RunLoop.main.add(timer, forMode: .common)
         thresholdTimer = timer
 
-        NotificationCenter.default.addObserver(
-            self, selector: #selector(handlePowerSourceChange),
-            name: .powerSourceDidChange, object: nil
-        )
+        // Observer didaftarkan SEKALI di init (dulu didaftarkan ulang setiap interval
+        // diubah → handler dobel). Di sini hanya timer + run loop source IOKit.
         #if canImport(IOKit)
         if powerSourceRunLoopSource == nil {
             let source = IOPSNotificationCreateRunLoopSource({ _ in
@@ -113,6 +129,8 @@ final class AppState: ObservableObject {
     }
 
     private func reapplyThresholdQuietly() {
+        // Jangan menyentuh hardware sebelum pengguna menekan Apply sendiri.
+        guard thresholds.canAutoReapply else { return }
         let start = thresholds.startPercent
         let stop = thresholds.stopPercent
         Task { await thresholds.reapply(start: start, stop: stop) }
@@ -129,13 +147,11 @@ final class AppState: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: work)
     }
 
+    /// Tampilkan (atau buat ulang) jendela utama. Dipakai tombol di popover
+    /// menu bar, tombol "Open Dashboard", dan klik ikon Dock.
     func openFullGUI() {
-        NSApp.setActivationPolicy(preferences.hideDockIcon ? .accessory : .regular)
-        NSApp.activate(ignoringOtherApps: true)
-        for window in NSApp.windows where window.contentViewController != nil || window.title != "" {
-            window.makeKeyAndOrderFront(nil)
-        }
-        NotificationCenter.default.post(name: .openFullGUI, object: nil)
+        selectedTab = 0
+        MainWindowController.shared.show()
     }
 }
 

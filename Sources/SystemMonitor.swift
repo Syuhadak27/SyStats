@@ -55,7 +55,7 @@ enum SystemMonitor {
 
         let total = Double(ProcessInfo.processInfo.physicalMemory)
         guard total > 0 else { return nil }
-        let pageSize = Double(vm_page_size)
+        let pageSize = Double(getpagesize())
         let active = Double(stats.active_count) * pageSize
         let wired = Double(stats.wired_count) * pageSize
         let compressed = Double(stats.compressor_page_count) * pageSize

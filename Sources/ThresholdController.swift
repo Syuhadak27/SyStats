@@ -15,7 +15,6 @@ final class ThresholdController: ObservableObject {
     ]
 
     private let preferences: PreferencesStore
-    private let applyLock = NSLock()
     private var cancellables = Set<AnyCancellable>()
 
     init(preferences: PreferencesStore) {
@@ -46,16 +45,15 @@ final class ThresholdController: ObservableObject {
         ThresholdValidation.message(start: startPercent, stop: stopPercent)
     }
 
+    /// @MainActor: semua @Published diubah di main thread (sebelumnya diubah
+    /// dari thread latar setelah `await` → "Publishing changes from background
+    /// threads" dan UI bisa tidak ter-update). NSLock di konteks async juga
+    /// dilarang di Swift 6, jadi flag `isApplying` cukup dijaga oleh main actor.
+    @MainActor
     func apply() async {
-        applyLock.lock()
-        guard !isApplying else { applyLock.unlock(); return }
+        guard !isApplying else { return }
         isApplying = true
-        applyLock.unlock()
-        defer {
-            applyLock.lock()
-            isApplying = false
-            applyLock.unlock()
-        }
+        defer { isApplying = false }
         guard let adapter = selectedAdapter else {
             lastResult = ThresholdOperationResult(success: false, message: "Tidak ada adapter dipilih.")
             return
@@ -67,18 +65,28 @@ final class ThresholdController: ObservableObject {
         }
         lastResult = result
         confirmedConfiguration = confirmed
+        // Reapply otomatis baru aktif setelah pengguna sendiri berhasil menerapkan.
+        if result.success && adapter.id == "thinkVPC" {
+            preferences.thresholdAutoReapply = true
+        }
+    }
+
+    /// Apakah timer/observer charger boleh menulis ulang threshold.
+    var canAutoReapply: Bool {
+        selectedAdapterID == "thinkVPC" && preferences.thresholdAutoReapply && !isApplying
     }
 
     /// Reapply periodik / setelah charger dicolok. Tidak menyentuh UI state,
     /// dan hanya untuk jalur ThinkVPC (helper eksternal tidak dipanggil berulang).
     func reapply(start: Int, stop: Int) async {
-        guard selectedAdapterID == "thinkVPC", let adapter = selectedAdapter else { return }
+        guard canAutoReapply, let adapter = selectedAdapter else { return }
         let prefs = preferences
         await Task.detached(priority: .utility) {
             _ = await adapter.write(start: start, stop: stop, preferences: prefs)
         }.value
     }
 
+    @MainActor
     func readFromAdapter() async {
         guard let adapter = selectedAdapter else {
             lastResult = ThresholdOperationResult(success: false, message: "Tidak ada adapter dipilih.")

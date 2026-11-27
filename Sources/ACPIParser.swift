@@ -47,8 +47,14 @@ enum ACPIParser {
     }
 
     static func findings(inAML data: Data, fileName: String) -> [ACPIFinding] {
-        let text = String(bytes: data, encoding: .ascii) ?? ""
-        return findings(inText: text, fileName: fileName, origin: .amlStringScan)
+        // AML adalah bytecode biner: hampir pasti memuat byte > 127, dan
+        // String(bytes:encoding:.ascii) mengembalikan nil untuk data seperti itu
+        // (scan lama tidak pernah menemukan apa pun). Ganti byte non-ASCII dengan titik.
+        let cleaned = data.map { $0 >= 0x20 && $0 < 0x7F ? $0 : UInt8(ascii: ".") }
+        let text = String(decoding: cleaned, as: UTF8.self)
+        // Segmen NamePath AML selalu 4 karakter; token pendek ("EC", "BST", "SMC")
+        // akan cocok dengan byte acak di biner, jadi hanya token >= 4 karakter.
+        return findings(inText: text, fileName: fileName, origin: .amlStringScan, minTokenLength: 4)
     }
 
     static func findings(inDSL text: String, fileName: String) -> [ACPIFinding] {
@@ -76,9 +82,11 @@ enum ACPIParser {
         return deduplicated(result)
     }
 
-    private static func findings(inText text: String, fileName: String, origin: ACPIFindingOrigin) -> [ACPIFinding] {
+    private static func findings(
+        inText text: String, fileName: String, origin: ACPIFindingOrigin, minTokenLength: Int = 1
+    ) -> [ACPIFinding] {
         var result: [ACPIFinding] = []
-        for (token, category) in tokenMap where text.contains(token) {
+        for (token, category) in tokenMap where token.count >= minTokenLength && text.contains(token) {
             result.append(ACPIFinding(
                 category: category,
                 name: token,

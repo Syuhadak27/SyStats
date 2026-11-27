@@ -114,7 +114,7 @@ struct InspectorView: View {
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: file.fileExtension == "aml" ? "doc.fill.badge.ellipsis" : "doc.text")
-                    .foregroundStyle(file.fileExtension == "aml" ? .blue : .purple)
+                    .foregroundStyle(file.fileExtension == "aml" ? Color.blue : Color.purple)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(file.name)
                         .font(.caption.weight(.semibold))
@@ -134,7 +134,7 @@ struct InspectorView: View {
             }
         }
         .padding(10)
-        .background(.quaternary.opacity(0.25), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(Color.secondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private var kextCard: some View {
@@ -144,7 +144,7 @@ struct InspectorView: View {
                 ForEach(inspection.kexts) { kext in
                     HStack(spacing: 8) {
                         Image(systemName: kext.isEnabled == true ? "checkmark.circle.fill" : "circle")
-                            .foregroundStyle(kext.isEnabled == true ? .green : .secondary)
+                            .foregroundStyle(kext.isEnabled == true ? Color.green : Color.secondary)
                         Text(kext.name)
                             .font(.caption.weight(.medium))
                         Spacer(minLength: 0)

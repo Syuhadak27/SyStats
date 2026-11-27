@@ -14,3 +14,4 @@ DerivedData/
 # Local overrides
 *.xcuserdatad/
 xcuserdata/
+*.zip

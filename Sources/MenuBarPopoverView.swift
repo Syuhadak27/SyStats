@@ -58,7 +58,7 @@ struct MenuBarPopoverView: View {
         return VStack(spacing: 8) {
             if mode == .ac {
                 compactRow(symbol: "bolt", label: "Voltage", value: snapshot.voltageText)
-                compactRow(symbol: "arrow.right arrow.left", label: "Current", value: snapshot.currentText)
+                compactRow(symbol: "arrow.left.arrow.right", label: "Current", value: snapshot.currentText)
                 compactRow(symbol: "bolt.batteryblock", label: "Power", value: snapshot.powerText)
             } else {
                 compactRow(symbol: "cpu", label: "CPU", value: snapshot.cpuText)

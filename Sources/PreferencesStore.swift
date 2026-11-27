@@ -60,6 +60,11 @@ final class PreferencesStore: ObservableObject {
     @Published var thresholdEnabled: Bool {
         didSet { defaults.set(thresholdEnabled, forKey: "thresholdEnabled") }
     }
+    /// true hanya setelah pengguna menekan Apply (atau menyalakan toggle) dan
+    /// berhasil. Sebelum itu timer reapply TIDAK boleh menulis ke hardware.
+    @Published var thresholdAutoReapply: Bool {
+        didSet { defaults.set(thresholdAutoReapply, forKey: "thresholdAutoReapply") }
+    }
     @Published var thresholdReapplyInterval: Double {
         didSet { defaults.set(thresholdReapplyInterval, forKey: "thresholdReapplyInterval") }
     }
@@ -99,6 +104,7 @@ final class PreferencesStore: ObservableObject {
         thresholdStart = defaults.object(forKey: "thresholdStart") as? Int ?? 75
         thresholdStop = defaults.object(forKey: "thresholdStop") as? Int ?? 85
         thresholdEnabled = defaults.object(forKey: "thresholdEnabled") as? Bool ?? true
+        thresholdAutoReapply = defaults.object(forKey: "thresholdAutoReapply") as? Bool ?? false
         thresholdReapplyInterval = defaults.object(forKey: "thresholdReapplyInterval") as? Double ?? 3.0
         batteryIndex = defaults.object(forKey: "batteryIndex") as? Int ?? 1
         ecDirectEnabled = defaults.object(forKey: "ecDirectEnabled") as? Bool ?? false
