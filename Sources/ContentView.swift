@@ -11,6 +11,9 @@ struct ContentView: View {
             PreferencesView()
                 .tabItem { Label("Preferences", systemImage: "gearshape") }
                 .tag(1)
+            AboutView()
+                .tabItem { Label("Tentang", systemImage: "info.circle") }
+                .tag(2)
         }
         .frame(minWidth: 780, minHeight: 560)
     }
