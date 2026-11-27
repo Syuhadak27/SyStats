@@ -58,29 +58,43 @@ enum PowerSourceReader {
                     ?? string(dict, "Battery Health Condition")
                 sample.battery.source = "IOPowerSources"
 
-                // Some IOKit implementations expose raw battery V/I here.
-                if let v = number(dict, "Voltage"), v > 0 {
-                    let volts = v > 100 ? v / 1000.0 : v
+                // IOPS memakai KONSTANTA kIOPSVoltageKey / kIOPSCurrentKey,
+                // bukan string literal "Voltage"/"Current". Menggunakan literal
+                // membuat kedua nilai selalu nil di banyak Hackintosh.
+                if let v = validInt(dict[kIOPSVoltageKey as String], in: 1...50_000) {
+                    let volts = Double(v) / 1000.0
                     sample.electrical.voltage = volts
-                    sample.electrical.voltageSource = "IOPowerSources"
+                    sample.electrical.voltageSource = "IOPowerSources \(kIOPSVoltageKey as String)"
                 }
-                if let a = number(dict, "Current") {
-                    let amps = abs(a) > 20 ? a / 1000.0 : a
-                    sample.electrical.current = amps
-                    sample.electrical.currentSource = "IOPowerSources"
+                if let a = validInt(dict[kIOPSCurrentKey as String], in: -100_000...100_000), a != 0 {
+                    sample.electrical.current = Double(a) / 1000.0
+                    sample.electrical.currentSource = "IOPowerSources \(kIOPSCurrentKey as String)"
                 }
             }
+        }
+
+        // Fallback AppleSmartBattery di IORegistry. Sering menjadi satu-satunya
+        // sumber V/A yang benar-benar hidup di Hackintosh + VirtualSMC/YogaSMC.
+        // Logika ini diport dari referensi BatteryLenovoAssistent (terbukti jalan).
+        let registry = Self.appleSmartBatteryElectrical()
+        if sample.electrical.voltage == nil, let mv = registry.voltage {
+            sample.electrical.voltage = Double(mv) / 1000.0
+            sample.electrical.voltageSource = "AppleSmartBattery Voltage"
+        }
+        if sample.electrical.current == nil, let ma = registry.current {
+            sample.electrical.current = Double(ma) / 1000.0
+            sample.electrical.currentSource = "AppleSmartBattery \(registry.currentKey)"
         }
 
         if foundAC { sample.source = .ac }
         else if foundBattery { sample.source = .battery }
         else { sample.source = .unknown }
 
-        // Charger electrical values: IOPowerSources rarely exposes them, so
-        // fall back to commonly used Intel SMC keys (VirtualSMC may not have them).
+        // Kandidat SMC tambahan (VirtualSMC / SMCBatteryManager / YogaSMC).
+        // Key yang TIDAK ada di SMC hanya menghasilkan nil, tanpa efek samping.
         if sample.source == .ac {
             if sample.electrical.voltage == nil,
-               let hit = SMCReader.shared.firstPlausibleNumber(for: ["VDCR", "VDDR"]) {
+               let hit = SMCReader.shared.firstPlausibleNumber(for: ["VDCR", "VDDR", "B0AV", "DG0R", "BG0R"], in: 1...60) {
                 let volts = hit.value > 100 ? hit.value / 1000.0 : hit.value
                 if volts < 60 {
                     sample.electrical.voltage = volts
@@ -88,7 +102,7 @@ enum PowerSourceReader {
                 }
             }
             if sample.electrical.current == nil,
-               let hit = SMCReader.shared.firstPlausibleNumber(for: ["IDCR", "IB0R"]) {
+               let hit = SMCReader.shared.firstPlausibleNumber(for: ["IDCR", "IB0R", "IB1R", "ID0R", "B0AC"], in: 0.001...20) {
                 let amps = hit.value > 20 ? hit.value / 1000.0 : hit.value
                 if amps < 20 {
                     sample.electrical.current = amps
@@ -96,7 +110,7 @@ enum PowerSourceReader {
                 }
             }
         } else if sample.source == .battery, sample.electrical.voltage == nil {
-            if let hit = SMCReader.shared.firstPlausibleNumber(for: ["VDDR"]) {
+            if let hit = SMCReader.shared.firstPlausibleNumber(for: ["VDDR", "B0AV"], in: 1...60) {
                 let volts = hit.value > 100 ? hit.value / 1000.0 : hit.value
                 if volts < 60 {
                     sample.electrical.voltage = volts
@@ -105,22 +119,39 @@ enum PowerSourceReader {
             }
         }
 
-        if let v = sample.electrical.voltage, let a = sample.electrical.current {
-            sample.electrical.power = v * abs(a)
+        // Wattage: V(mV) × A(mA) / 1e6 sesuai referensi BatteryLenovoAssistent.
+        // Fallback: SMC PDTR (adapter power) / PPBR (battery power), lalu watt
+        // dari IOPSCopyExternalPowerAdapterDetails(). Tidak ada angka rekaan.
+        if sample.electrical.power == nil,
+           let v = sample.electrical.voltage, let a = sample.electrical.current {
+            sample.electrical.power = abs(v * a)
             sample.electrical.powerSourceName = "computed V × A"
-        } else if let w = SMCReader.shared.firstPlausibleNumber(for: ["WDCR"]), w.value < 500 {
-            sample.electrical.power = w.value
-            sample.electrical.powerSourceName = "SMC \(w.key)"
+        }
+        if sample.electrical.power == nil {
+            if sample.source == .ac,
+               let hit = SMCReader.shared.firstPlausibleNumber(for: ["PDTR", "WDCR"], in: 1...500) {
+                sample.electrical.power = hit.value
+                sample.electrical.powerSourceName = "SMC \(hit.key)"
+            } else if let hit = SMCReader.shared.firstPlausibleNumber(for: ["PPBR"], in: 1...500) {
+                sample.electrical.power = hit.value
+                sample.electrical.powerSourceName = "SMC \(hit.key)"
+            }
+        }
+        if sample.electrical.power == nil, sample.source == .ac,
+           let details = IOPSCopyExternalPowerAdapterDetails()?.takeRetainedValue() as? [String: Any],
+           let watts = validInt(details[kIOPSPowerAdapterWattsKey as String], in: 1...500) {
+            sample.electrical.power = Double(watts)
+            sample.electrical.powerSourceName = "IOPS adapter watts"
         }
 
         if sample.electrical.voltage == nil {
-            sample.diagnostics.append("Voltage: not exposed by IOPowerSources; SMC VDCR/VDDR unavailable or unsupported by this SMC.")
+            sample.diagnostics.append("Voltage: IOPowerSources / AppleSmartBattery / SMC Kandidat tidak terbaca.")
         }
         if sample.electrical.current == nil {
-            sample.diagnostics.append("Current: not exposed by IOPowerSources; SMC IDCR/IB0R unavailable or unsupported by this SMC.")
+            sample.diagnostics.append("Current: IOPowerSources / AppleSmartBattery / SMC Kandidat tidak terbaca.")
         }
         if sample.electrical.power == nil {
-            sample.diagnostics.append("Wattage: cannot be computed without both V and A, and no SMC wattage key was readable.")
+            sample.diagnostics.append("Wattage: tidak bisa dihitung (V atau A kosong) dan SMC PDTR/PPBR + adapter watts tidak terbaca.")
         }
         #else
         sample.diagnostics.append("IOKit is unavailable in this build.")
@@ -153,6 +184,40 @@ enum PowerSourceReader {
         if let value = dict[key] as? NSNumber { return value.boolValue }
         if let value = dict[key] as? Bool { return value }
         return nil
+    }
+
+    private static func validInt(_ value: Any?, in range: ClosedRange<Int>) -> Int? {
+        guard let number = (value as? NSNumber)?.intValue, range.contains(number) else { return nil }
+        return number
+    }
+
+    /// Nilai V/A mentah (mV / mA) dari AppleSmartBattery di IORegistry.
+    /// Diport dari BatteryLenovoAssistent/LivePowerReader (terbukti di Hackintosh).
+    private static func appleSmartBatteryElectrical() -> (voltage: Int?, current: Int?, currentKey: String) {
+        #if canImport(IOKit)
+        let service = IOServiceGetMatchingService(
+            kIOMainPortDefault,
+            IOServiceMatching("AppleSmartBattery")
+        )
+        guard service != 0 else { return (nil, nil, "unavailable") }
+        defer { IOObjectRelease(service) }
+
+        var properties: Unmanaged<CFMutableDictionary>?
+        guard IORegistryEntryCreateCFProperties(service, &properties, kCFAllocatorDefault, 0) == kIOReturnSuccess,
+              let dict = properties?.takeRetainedValue() as? [String: Any] else {
+            return (nil, nil, "unavailable")
+        }
+        let voltage = validInt(dict["Voltage"], in: 1...50_000)
+        if let ma = validInt(dict["InstantAmperage"], in: -100_000...100_000) {
+            return (voltage, ma, "InstantAmperage")
+        }
+        if let ma = validInt(dict["Amperage"], in: -100_000...100_000) {
+            return (voltage, ma, "Amperage")
+        }
+        return (voltage, nil, "unavailable")
+        #else
+        return (nil, nil, "unavailable")
+        #endif
     }
 
     private static func percent(_ dict: [String: Any], _ currentKey: String, _ maxKey: String) -> Double? {
