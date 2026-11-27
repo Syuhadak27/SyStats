@@ -193,7 +193,7 @@ Validasi: 0–100%, `stop > start`, gap minimal 5%, slider langkah 5%. App **tid
 Workflow: `.github/workflows/build-release.yml` (runner `macos-latest`). Deployment target: **macOS 13.0**. Hasil build **universal** (Intel `x86_64` + Apple Silicon `arm64`) dan **ad-hoc signed**.
 
 - Push `main`/`master`, PR, atau `workflow_dispatch` → build Release + upload artifact (`SyStats-<tag>.zip`, `SyStats-<tag>.dmg`, `SHA256SUMS.txt`).
-- Push tag `v*` (mis. `v1.1.0`) → semua file di atas ikut dipublikasikan sebagai **GitHub Release**.
+- Push tag `v*` (mis. `v1.1.1`) → semua file di atas ikut dipublikasikan sebagai **GitHub Release**.
 - Jika build gagal, log lengkap tersedia sebagai artifact `xcodebuild-log-*` dan ringkasan error muncul di tab *Summary*.
 
 Langkah CI: `xcodegen generate --spec project.yml --project .` → `xcodebuild -scheme SyStats -configuration Release ARCHS="x86_64 arm64"` → verifikasi bundle → `codesign --sign -` (ad-hoc) → `ditto` zip + `hdiutil` dmg.
