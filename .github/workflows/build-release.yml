@@ -25,7 +25,18 @@ jobs:
         run: brew install xcodegen
 
       - name: Generate Xcode project from project.yml
-        run: xcodegen generate --spec project.yml --project SyStats.xcodeproj
+        run: |
+          set +e
+          output=$(xcodegen generate --spec project.yml --project SyStats.xcodeproj 2>&1)
+          code=$?
+          set -e
+          {
+            echo "### XcodeGen"
+            echo '```'
+            echo "$output"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $code
 
       - name: Build (Release, unsigned)
         run: |
