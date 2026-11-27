@@ -227,7 +227,14 @@ jobs:
               "type": "application/octet-stream",
               "length": length,
           })
-          channel.insert(0, item)
+          # Sisipkan setelah metadata channel (title/link/description/language),
+          # bukan di index 0, agar struktur RSS tetap valid untuk Sparkle.
+          metadata_tags = {"title", "link", "description", "language"}
+          insert_at = 0
+          for idx, child in enumerate(list(channel)):
+              if child.tag in metadata_tags:
+                  insert_at = idx + 1
+          channel.insert(insert_at, item)
           xml = minidom.parseString(ET.tostring(root, encoding="utf-8")).toprettyxml(indent="  ")
           open("appcast.xml", "w").write(xml)
           PY
