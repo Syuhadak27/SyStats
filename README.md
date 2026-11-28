@@ -1,250 +1,133 @@
 # SyStats
 
-<div align="center">
-
-### Native macOS telemetry & charge-threshold control for Hackintosh
-
 [![Build & Release](https://github.com/Syuhadak27/SyStats/actions/workflows/build-release.yml/badge.svg)](https://github.com/Syuhadak27/SyStats/actions/workflows/build-release.yml)
-[![Release](https://img.shields.io/github/v/release/Syuhadak27/SyStats?display_name=tag&style=flat-square)](https://github.com/Syuhadak27/SyStats/releases)
-[![macOS 13+](https://img.shields.io/badge/macOS-13%20Ventura%2B-blue?style=flat-square)](https://github.com/Syuhadak27/SyStats)
-[![License: MIT + Attribution](https://img.shields.io/badge/license-MIT%20%2B%20attribution-green?style=flat-square)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/Syuhadak27/SyStats?display_name=tag)](https://github.com/Syuhadak27/SyStats/releases)
+[![macOS 13+](https://img.shields.io/badge/macOS-13%20Ventura%2B-blue)](https://github.com/Syuhadak27/SyStats)
+[![License](https://img.shields.io/badge/license-MIT%20with%20attribution-green)](LICENSE)
 
-**Read-only EFI/ACPI audit · live power telemetry · modular charge-threshold adapters · fully customizable menu bar**
+SyStats adalah aplikasi menu bar native untuk macOS pada sistem Hackintosh. Aplikasi ini menampilkan telemetri daya secara langsung, mengatur batas pengisian baterai, dan memeriksa file EFI/ACPI tanpa mengubahnya.
 
-</div>
+## Fitur
 
----
+- Telemetri langsung: tegangan, arus, daya, penggunaan CPU dan RAM, kecepatan kipas, serta suhu.
+- Batas pengisian baterai (Start/Stop) melalui YogaSMC/ThinkVPC, dengan opsi direct EC dan helper eksternal.
+- Item menu bar yang dapat diatur: pilih metric, ubah label, aktifkan/nonaktifkan, dan ubah urutan.
+- Pemeriksaan EFI/ACPI otomatis di latar belakang; hasilnya ditampilkan sebagai status singkat, bukan sebagai menu tersendiri.
+- Pembaruan otomatis melalui Sparkle 2 dan GitHub Releases.
+- Build universal untuk Intel (`x86_64`) dan Apple Silicon (`arm64`), dengan target macOS 13 Ventura atau lebih baru.
 
 ## Screenshots
 
-<table>
-  <tr>
-    <td width="50%"><img src="images/dashboard-charging.jpg" alt="Dashboard saat charger terpasang" /></td>
-    <td width="50%"><img src="images/dashboard-battery-live.jpg" alt="Dashboard saat pakai baterai" /></td>
-  </tr>
-  <tr>
-    <td align="center"><b>Charger connected</b> — V / A / W dari baterai + adapter</td>
-    <td align="center"><b>On battery</b> — CPU / RAM / Fan / Temperature</td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="images/menubar-customizer.jpg" alt="Editor item menu bar" /></td>
-    <td width="50%"><img src="images/menubar-popover.jpg" alt="Popover menu bar" /></td>
-  </tr>
-  <tr>
-    <td align="center"><b>Menu Bar editor</b> — label bebas, checklist, drag-urutan</td>
-    <td align="center"><b>Menu bar + popover</b> — telemetry ringkas & kontrol cepat</td>
-  </tr>
-</table>
+**Dashboard saat charger terpasang**
 
-<details>
-<summary>Kondisi sebelum perbaikan pembacaan sensor (V/A/W masih <code>—</code>)</summary>
+![Dashboard dengan tegangan, arus, dan daya](images/dashboard-charging.jpg)
 
-<img src="images/dashboard-battery-offline.jpg" alt="Dashboard sebelum V/A/W terbaca" />
+**Dashboard saat menggunakan baterai**
 
-</details>
+![Dashboard dengan CPU, RAM, kipas, dan suhu](images/dashboard-battery-live.jpg)
 
-### Tentang & pengecekan update
+**Editor menu bar**
 
-<img src="images/menu_uptodate.jpg" alt="Tab Tentang: versi aplikasi, build, dan status update" />
+![Pengaturan item menu bar](images/menubar-customizer.jpg)
 
-Tab **Tentang** menampilkan versi aplikasi, nomor build, sumber feed update (**GitHub Releases** via Sparkle 2), dan tombol **Check for Updates...**. Saat sudah menggunakan rilis terbaru, Sparkle menampilkan dialog *"You're up to date!"*.
+**Popover menu bar**
 
----
+![Popover dengan telemetri dan kontrol threshold](images/menubar-popover.jpg)
 
-## Fitur utama
+**Tab Tentang dan pengecekan update**
 
-- **Audit EFI/ACPI read-only** — memindai `.aml`/`.dsl` & `config.plist`, mengindeks tabel/perangkat dan method terkait battery, EC, thermal, fan, SMC. File EFI **tidak pernah ditulis**.
-- **Telemetri live** — Voltage / Current / Power, CPU %, RAM %, Fan RPM, Temperature °C, dan status baterai (%, charging, cycle, health, time remaining).
-- **Menu bar sepenuhnya milik user** — pilih item mana saja, ganti label teks bebas (emoji boleh), checklist aktif/nonaktif, drag untuk urutan, separator bebas, preset cepat AC/Battery/Automatic. Lihat screenshot editor di atas.
-- **Charge threshold modular** — Start/Stop via YogaSMC/ThinkVPC (ACPI `BCCS`/`BCSS`), VirtualSMC read-only, atau external helper. Tidak pernah mengklaim sukses bila interface menolak.
-- **Ringan** — polling IOKit/SMC di queue utility; UI tidak render ulang seluruh halaman tiap update; material/blur digunakan seminimal mungkin.
+![Dialog Check for Updates](images/menu_uptodate.jpg)
 
-> Build & release sepenuhnya via GitHub Actions pada runner macOS. Tidak perlu build lokal.
+**Kondisi sebelum pembacaan tegangan/arus diperbaiki**
 
----
+![Dashboard dengan nilai V/A/W belum terbaca](images/dashboard-battery-offline.jpg)
 
-## 1. Struktur & aset
+## Instalasi
 
-```
-.
-├── Sources/              # semua file Swift
-├── images/               # screenshot untuk README
-├── Assets.xcassets/      # AppIcon + MenuBarIcon
-├── Config/Info.plist     # Info.plist manual (dipakai project.yml)
-├── project.yml           # spesifikasi XcodeGen
-├── .github/workflows/    # build & release otomatis
-└── EFI/                  # REFERENSI LOKAL SAJA — diabaikan git
+1. Unduh `SyStats-<versi>.dmg` dari halaman [Releases](https://github.com/Syuhadak27/SyStats/releases).
+2. Buka DMG tersebut dan seret `SyStats.app` ke folder Applications.
+3. Klik kanan `SyStats.app`, pilih **Open**, lalu konfirmasi **Open** sekali lagi.
+
+Aplikasi ditandatangani secara ad-hoc dan belum dinotarisasi. Pada macOS 15 atau lebih baru, jika tetap diblokir, buka **System Settings → Privacy & Security** dan pilih **Open Anyway**. Sebagai alternatif, jalankan:
+
+```bash
+xattr -cr "/Applications/SyStats.app"
 ```
 
-| Aset | Keterangan |
-|---|---|
-| `icon.png` | Ikon aplikasi (AppIcon). |
-| `menu_bar.png` | Glif menu bar (template image, monochrome, tajam di wallpaper terang/gelap). |
-| `images/*.jpg` | Screenshot dashboard, menu bar editor, popover, dan tab Tentang/update. |
+## Penggunaan
 
-Ganti ikon cukup dengan menimpa `icon.png` lalu regenerate `menu_bar.png`, atau pilih path custom di tab **Menu Bar → Assets**. Aplikasi tidak crash bila path berubah; fallback ke aset bundle.
+### Batas pengisian baterai
 
-Folder `EFI/` hanya contoh referensi dan **sengaja tidak ikut version control** (lihat `.gitignore`).
+Buka Dashboard, aktifkan **Enable charge threshold**, lalu atur nilai Start dan Stop. Tekan **Apply** untuk menulis nilai ke adapter yang terdeteksi. Nilai slider menunjukkan nilai yang diinginkan; status "Applied & verified" hanya muncul jika adapter berhasil melakukan read-back.
 
----
+Rentang nilai adalah 0–100%, Stop harus lebih besar dari Start, dengan jarak minimal 5%.
 
-## 2. Arsitektur kode
+### Menu bar
 
-Semua kode ada di satu folder `Sources/` agar ringkas:
+Tab **Menu Bar** menyediakan preset (Automatic, Always AC, Always Battery), daftar item yang dapat diatur, label bebas, dan separator. Perubahan langsung diterapkan pada status item.
 
-- `SyStatsApp.swift`, `AppEnvironment.swift`, `AppState.swift` — entry & state bersama.
-- `AppDelegate.swift`, `MenuBarController.swift`, `MainWindowController.swift` — jembatan AppKit (`NSStatusItem`, popover, jendela utama yang bisa dibuka ulang setelah ditutup).
-- `Telemetry*.swift`, `SMCReader.swift`, `PowerSourceReader.swift`, `SystemMonitor.swift`, `SensorReader.swift` — pembacaan sensor.
-- `MenuBarItem.swift` — model item menu bar yang bisa diatur user.
-- `ACPIInspector.swift`, `ACPIParser.swift`, `EFIDetector.swift` — audit EFI (read-only).
-- `YogaSMCBridge.swift`, `ThresholdAdapters.swift`, `ThresholdController.swift` — jembatan ThinkVPC/EC + adapter write threshold.
-- `DashboardView.swift`, `PreferencesView.swift`, `MenuBarPopoverView.swift`, `UIComponents.swift`, dll — GUI. Pemeriksaan EFI berjalan otomatis di belakang layar; tidak ada tab EFI lagi. Hasilnya hanya muncul sebagai status singkat di Dashboard dan detail teknis yang bisa dibuka bila perlu.
+## Cara kerja
 
-Pemisahan penting:
+### Sumber telemetri
 
-- **Audit (baca)**: `ACPIInspector` hanya membaca `.aml`/`.dsl` dan `config.plist`.
-- **Runtime write**: `ThresholdController` → `ThresholdAdapting`. Method ACPI di AML **tidak** otomatis bisa dipanggil dari userspace macOS; status ini ditampilkan terpisah di GUI.
-- **Render isolation**: telemetry & threshold tidak diteruskan ke `AppState.objectWillChange`, sehingga halaman Preferences (tempat TextField diedit) tidak ikut render ulang tiap poll.
-
----
-
-## 3. Deteksi EFI & scan ACPI
-
-`EFIDetector` mencoba (berurutan): path tersimpan → `/Volumes/EFI/EFI` → `/Volumes/EFI` → `/Volumes/ESP/EFI` → `/Volumes/ESP` → `~/Desktop/EFI` → `~/EFI` → `EFI` relatif.
-
-Folder ACPI yang dipindai: `EFI/OC/ACPI`, `EFI/APPLE/ACPI`, `EFI/ACPI` (semua yang ada).
-
-Untuk setiap `.aml`: header ACPI 36 byte diparse persis (signature, length, revision, OEMID, OEMTableID), lalu **heuristic ASCII token scan** (AML NamePath menyimpan segmen ASCII 4 karakter). Untuk `.dsl`: regex deklarasi `Device/Method/Name/OperationRegion/Field`. Kategori: battery, EC, thermal, fan, SMC, power management. Setiap temuan diberi label sumbernya.
-
-`config.plist` dibaca untuk mengetahui kext yang benar-benar **Enabled** (VirtualSMC, SMCBatteryManager, SMCProcessor, SMCSuperIO, YogaSMC, ECEnabler, VoodooSMBus). Jika tidak terbaca, status **Unknown**, bukan dikira-kira.
-
----
-
-## 4. Telemetri & keterbatasan jujur
-
-| Data | Sumber | Catatan |
+| Data | Sumber utama | Catatan |
 |---|---|---|
-| Baterai %, charging, cycle, health | `IOPowerSources` | API publik macOS |
-| Voltage / Current / Power | `kIOPSVoltageKey`/`kIOPSCurrentKey` → `AppleSmartBattery` (`Voltage`, `InstantAmperage`/`Amperage`) → kandidat SMC (`VDCR`, `B0AV`, `PDTR`, `PPBR`, …) → adapter watt | **Perbaikan v1.1.0**: dulu memakai string literal `"Voltage"`/`"Current"` sehingga selalu `—` di Hackintosh. Sekarang terbaca (lihat screenshot). |
-| CPU % | `host_statistics(HOST_CPU_LOAD_INFO)` | Delta antar sampling |
-| RAM % | `host_statistics64(HOST_VM_INFO64)` | active + wired + compressed / total |
-| Fan RPM | SMC `FNum`, `F0Ac`…`F4Ac` | Bergantung SMCSuperIO/YogaSMC |
-| Suhu °C | SMC `TC0D`, `TC0P`, `TN0P`, `TC0c` | Umum di Intel Mac; tidak di Apple Silicon |
+| Kapasitas baterai | `IOPowerSources` | Sumber yang sama dengan ikon baterai macOS |
+| Tegangan dan arus | `kIOPSVoltageKey`, `kIOPSCurrentKey`, lalu `AppleSmartBattery` | Fallback SMC digunakan bila keduanya tidak tersedia |
+| Daya | `V × \|A\|`, atau SMC/adapter watt | Daya baterai, bukan konsumsi sistem |
+| CPU | `host_statistics(HOST_CPU_LOAD_INFO)` | Dihitung dari selisih antar sampling |
+| RAM | `host_statistics64(HOST_VM_INFO64)` | Perkiraan memori terpakai |
+| Kipas dan suhu | SMC `F0Ac`, `TC0D`, `TC0P`, `TN0P` | Bergantung pada kext yang aktif |
 
-### Arti V / A / W saat charger terpasang
+Nilai yang tidak tersedia ditampilkan sebagai `—` disertai diagnostik, bukan diganti dengan data contoh.
 
-Nilai yang ditampilkan adalah **daya & arus baterai**, bukan konsumsi sistem:
+### Pemeriksaan EFI
 
-- `V` = tegangan **baterai** (mV → V), bukan tegangan adapter.
-- `A` = arus **baterai** (mA → A). Konvensi Apple: negatif = charging (masuk baterai), positif = discharging.
-- `W` = `V × |A|` = daya yang masuk/keluar baterai. Bisa ≈ 0 saat baterai penuh / threshold stop, meski charger tetap colok.
+`EFIDetector` mencari folder EFI pada path tersimpan, `/Volumes/EFI/EFI`, `/Volumes/ESP/EFI`, `~/Desktop/EFI`, `~/EFI`, dan folder `EFI` relatif. File `.aml` dan `.dsl` dipindai di `OC/ACPI`, `APPLE/ACPI`, dan `ACPI`.
 
-Fallback `PDTR` (SMC) dan `IOPSCopyExternalPowerAdapterDetails()` dipakai hanya bila `V × A` tidak bisa dihitung. Tidak ada angka rekaan: sumber selalu ditampilkan di tile (mis. `AppleSmartBattery Voltage`, `IOPS Current`, `computed V × A`).
+Pemeriksaan hanya membaca file. Tabel ACPI, method terkait baterai/EC/thermal/fan/SMC, dan status kext dari `config.plist` dipakai untuk menentukan kemampuan sistem. Method yang ada di dalam AML tidak dianggap otomatis dapat dipanggil dari ruang pengguna macOS.
 
-Pembacaan SMC/IOKit dijalankan di queue utility, bukan di callback timer main thread.
+### Adapter threshold
 
----
+- **YogaSMC/ThinkVPC** menulis properti `setCMstart` dan `setCMstop` yang diteruskan ke method ACPI `BCCS`/`BCSS`.
+- **Direct EC** menggunakan `YogaSMCUserClient` untuk `WE1B`/`RE1B`. Offset harus diisi manual dan diverifikasi oleh pengguna; fitur ini default nonaktif.
+- **VirtualSMC** bersifat read-only dan tidak mengklaim write.
+- **External helper** menjalankan executable yang ditentukan pengguna dengan argumen Start dan Stop.
 
-## 5. Menu bar customization
+Reapply berkala dan notifikasi perubahan charger menjaga nilai tetap konsisten setelah charger dicolok atau dicabut.
 
-Tab **Menu Bar** (lihat screenshot) menyediakan:
+## Build dari sumber
 
-- **Preset cepat**: `Automatic (follows charger)`, `Always AC (V/A/W)`, `Always Battery (CPU/RAM/RPM/°C)`. Memilih preset menimpa daftar item.
-- **Daftar item**: centang aktif/nonaktif, `TextField` label bebas — boleh kosong (nilai tetap tampil tanpa label) atau emoji (contoh screenshot memakai 🪫, 🌀, 🧠, 🌡️, 🚀, ⚡).
-- **Drag reorder** lewat `.onMove` di `List`.
-- **Separator bebas** (default satu spasi).
-- **Compact text**: sembunyikan semua label tanpa menghapus data user.
-- **Live preview** dari telemetri aktual (bukan data contoh), diisolasi di subview agar tidak merender ulang editor saat polling.
+Proyek Xcode dihasilkan oleh XcodeGen dan di-build oleh GitHub Actions. Tidak diperlukan build lokal.
 
-Item tersedia: Voltage, Current, Power, CPU, RAM, Fan, Temperature, Battery. Tidak ada batas jumlah item.
+```bash
+brew install xcodegen
+xcodegen generate --spec project.yml --project .
+xcodebuild -project SyStats.xcodeproj -scheme SyStats \
+  -configuration Release -destination 'platform=macOS' \
+  ARCHS='x86_64 arm64' CODE_SIGNING_ALLOWED=NO
+```
 
----
+Workflow `build-release.yml` melakukan generate, build universal, verifikasi bundle, ad-hoc codesign, packaging ZIP/DMG, dan publikasi GitHub Release saat tag `v*` di-push.
 
-## 6. Charge threshold — mengikuti pola BatteryLenovoAssistent
+## Struktur proyek
 
-Mekanisme diadaptasi dari audit repo [Syuhadak27/BatteryLenovoAssistent](https://github.com/Syuhadak27/BatteryLenovoAssistent) (YogaSMC 1.5.3). **Threshold bukan SMC key** (`B0St/B0Sp/B0En/BCLM` bukan jalur yang benar).
+```text
+Sources/              Kode Swift
+Assets.xcassets/      AppIcon dan MenuBarIcon
+Config/Info.plist     Konfigurasi bundle
+images/               Screenshot untuk README
+project.yml           Spesifikasi XcodeGen
+.github/workflows/    Build dan release otomatis
+EFI/                  Referensi lokal, tidak ikut version control
+```
 
-### Jalur utama — YogaSMC / ThinkVPC
+## Pembaruan
 
-- Cari service `ThinkVPC` di IORegistry (bukan hanya mengandalkan `config.plist`).
-- Kirim properti IOUserClient secara **berurutan**:
-  1. `{"Battery": 1}` — 0=ANY, 1=PRIMARY, 2=SECONDARY (urutan penting karena `NSDictionary` tidak terurut).
-  2. `{"Battery": 1, "setCMstart": <start>, "setCMstop": <stop>}` → `ThinkVPC::setPropertiesGated()` → ACPI **`BCCS`/`BCSS`** → SMI/EC.
-- Fallback: `IOServiceOpen` + `IOConnectSetCFProperties`.
-- `stop = 100` dikirim sebagai `0` (sesuai YogaSMCPane). Saat threshold dimatikan: `start=0`, `stop=0`, `setCMInhibitCharge=0`.
-- Status mentah `BAT_PRIMARY` (`BCTG`, `BCSG`, …) hanya untuk diagnostik; pasangan start/stop tidak dipakai sebagai UI karena pemetaannya tidak bisa dipastikan dari binary.
+Feed Sparkle tersimpan di `appcast.xml`. Kunci privat Ed25519 disimpan sebagai GitHub Secret `SPARKLE_PRIVATE_KEY`. Lihat `UPDATING.md` untuk prosedur penyiapan dan rilis.
 
-### Opsi lanjutan — Direct EC (default MATI)
+## Lisensi
 
-- `YogaSMCUserClient` selector 0=open, 2=`readEC(offset)`, 3=`writeEC(offset,byte)` → method ACPI `RE1B`/`WE1B` dari `SSDT-EC.aml`.
-- Offset diisi manual dalam hex `0x01–0x99` lewat **Menu Bar → Advanced**. **Jangan menebak offset**; salah offset bisa mengubah fan/LED/sleep.
-- Byte hanya ditulis bila berbeda, lalu diverifikasi dengan `RE1B`. Status GUI: **Applied & verified** vs **Applied (unverified)**.
-
-### Realtime
-
-- Timer reapply (default 3 detik, bisa diatur) + observer `IOPSNotificationCreateRunLoopSource` saat charger dicabut/dicolok, dengan debounce 2 detik agar EC sempat settle.
-- Semua akses IOKit dijalankan di background; helper eksternal **tidak** dipanggil berulang oleh timer.
-
-### Adapter lain
-
-- **VirtualSMC**: read-only, jujur menolak write.
-- **External helper**: `<path> <start%> <stop%>` tanpa shell; exit bukan 0 = gagal.
-
-Validasi: 0–100%, `stop > start`, gap minimal 5%, slider langkah 5%. App **tidak disandbox** agar akses IOKit ke service kext diizinkan.
-
----
-
-## 7. Build & Release via GitHub Actions
-
-Workflow: `.github/workflows/build-release.yml` (runner `macos-latest`). Deployment target: **macOS 13.0**. Hasil build **universal** (Intel `x86_64` + Apple Silicon `arm64`) dan **ad-hoc signed**.
-
-- Push `main`/`master`, PR, atau `workflow_dispatch` → build Release + upload artifact (`SyStats-<tag>.zip`, `SyStats-<tag>.dmg`, `SHA256SUMS.txt`).
-- Push tag `v*` (mis. `v1.1.1`) → semua file di atas ikut dipublikasikan sebagai **GitHub Release**.
-- Jika build gagal, log lengkap tersedia sebagai artifact `xcodebuild-log-*` dan ringkasan error muncul di tab *Summary*.
-
-Langkah CI: `xcodegen generate --spec project.yml --project .` → `xcodebuild -scheme SyStats -configuration Release ARCHS="x86_64 arm64"` → verifikasi bundle → `codesign --sign -` (ad-hoc) → `ditto` zip + `hdiutil` dmg.
-
-> Artifact GitHub membuang permission file, jadi `.app` tidak pernah diunggah mentah — selalu dibungkus zip/dmg dulu.
-
-### Cara membuka (tanpa Terminal)
-
-1. Unduh `.dmg` (atau `.zip`), seret **SyStats.app** ke **Applications**.
-2. **Klik kanan** SyStats.app → **Open** → **Open**. Cukup sekali.
-3. macOS 15 (Sequoia) ke atas: jika ditolak, buka **System Settings → Privacy & Security**, gulir ke bawah, klik **Open Anyway** di samping SyStats.
-
-(Opsional, hanya jika masih diblokir: `xattr -cr "/Applications/SyStats.app"`.)
-
----
-
-## 8. Update otomatis (Sparkle 2)
-
-Aplikasi memeriksa update dari GitHub Releases lewat [Sparkle 2](https://sparkle-project.org):
-
-- Feed: [`appcast.xml`](appcast.xml) di branch `main`.
-- Tanda tangan Ed25519 — public key ada di `Config/Info.plist` (`SUPublicEDKey`).
-- Cek otomatis tiap 24 jam, atau manual lewat **Check for Updates…** di popover menu bar.
-- **Setiap push tag `v*`** otomatis: build → upload release → tanda tangani zip → **menulis item terbaru ke `appcast.xml`** dan commit balik ke `main`.
-
-Lihat [`UPDATING.md`](UPDATING.md) untuk men-set GitHub Secret `SPARKLE_PRIVATE_KEY` dan alur rilis lengkap.
-
----
-
-## 9. Catatan keamanan
-
-- EFI diperlakukan **read-first**: tidak ada kode yang menulis `.aml`/`.dsl`/`config.plist`, dan folder EFI tidak ikut commit.
-- SMC/EC write hanya terjadi setelah tombol **Apply** ditekan pada adapter yang dipilih pengguna.
-- Semua asumsi key SMC/ACPI terdokumentasi di komentar kode dan di GUI sebagai diagnostik.
-- Label menu bar murni kosmetik; tidak pernah mengubah sumber atau satuan nilai.
-- Preview menu bar memakai telemetri aktual, bukan angka contoh yang disajikan sebagai data live.
-
----
-
-## 10. Lisensi
-
-[MIT License with Attribution Requirement](LICENSE) — © 2026 Syuhadak27.
-
-Boleh digunakan, dimodifikasi, dan didistribusikan ulang, **dengan syarat wajib mencantumkan repo asal**:
+MIT License dengan kewajiban atribusi. Lihat [LICENSE](LICENSE).
 
 > Based on SyStats — https://github.com/Syuhadak27/SyStats
-
-Atribusi harus muncul di header file yang dimodifikasi, README/docs distribusi, layar About/credits, atau release notes. Lihat [LICENSE](LICENSE) untuk ketentuan lengkap.
