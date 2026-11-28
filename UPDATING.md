@@ -8,11 +8,15 @@ Simpan private key Ed25519 sebagai **GitHub Repository Secret**:
 
 1. Buka repo → **Settings → Secrets and variables → Actions → New repository secret**.
 2. Nama: `SPARKLE_PRIVATE_KEY`
-3. Isi (base64, 96 byte — JANGAN pernah di-commit):
+3. Isi (base64 32-byte dari `generate_keys` Sparkle — JANGAN pernah di-commit):
 
 ```
-BASE64_PRIVATE_KEY_PLACEHOLDER
+PRIVATE_KEY_DARI_GENERATE_KEYS_SPARKLE
 ```
+
+> Key lama (generate manual via OpenSSL, 96-byte) **tidak valid** untuk Sparkle
+> dan sudah diganti. Public key sekarang:
+> `1p5bo1yS7TBhNKPDUqZWC+AYxryrA7/WMTpIjv2guTk=` (terpasang di Info.plist).
 
 > Private key tidak pernah masuk git. `.gitignore` sudah mengabaikan
 > `.sparkle-tools/`, `private-key*.txt`, `priv.pem`, dan `*.tar.xz`.
@@ -37,6 +41,18 @@ Public key terpasang di `Config/Info.plist` (`SUPublicEDKey`) dan **tidak boleh 
    https://raw.githubusercontent.com/Syuhadak27/SyStats/main/appcast.xml
    ```
    Automatic checks tiap 24 jam, atau user klik **Check for Updates…** di popover.
+
+## Path manual (sama seperti referensi BatteryLenovoAssistent)
+
+Kalau ingin menandatangani & menyiapkan item appcast tanpa CI:
+
+```bash
+./build_release.sh
+```
+
+Script build, zip, lalu tanda tangani dengan urutan sumber private key:
+`SPARKLE_PRIVATE_KEY` → `$HOME/Documents/SyStats-PrivateKey.txt` → Keychain account `SyStats`.
+Output siap ditempel ke `appcast.xml` (mirip `build_release.sh` referensi).
 
 ## Verifikasi feed
 
