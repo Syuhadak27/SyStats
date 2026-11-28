@@ -43,6 +43,12 @@
 
 </details>
 
+### Tentang & pengecekan update
+
+<img src="images/menu_uptodate.jpg" alt="Tab Tentang: versi aplikasi, build, dan status update" />
+
+Tab **Tentang** menampilkan versi aplikasi, nomor build, sumber feed update (**GitHub Releases** via Sparkle 2), dan tombol **Check for Updates...**. Saat sudah menggunakan rilis terbaru, Sparkle menampilkan dialog *"You're up to date!"*.
+
 ---
 
 ## Fitur utama
@@ -74,7 +80,7 @@
 |---|---|
 | `icon.png` | Ikon aplikasi (AppIcon). |
 | `menu_bar.png` | Glif menu bar (template image, monochrome, tajam di wallpaper terang/gelap). |
-| `images/*.jpg` | Screenshot dashboard, menu bar editor, dan popover. |
+| `images/*.jpg` | Screenshot dashboard, menu bar editor, popover, dan tab Tentang/update. |
 
 Ganti ikon cukup dengan menimpa `icon.png` lalu regenerate `menu_bar.png`, atau pilih path custom di tab **Menu Bar → Assets**. Aplikasi tidak crash bila path berubah; fallback ke aset bundle.
 
