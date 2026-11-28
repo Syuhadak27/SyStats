@@ -63,9 +63,9 @@ enum SystemMonitor {
         // memori app (internal − purgeable) + wired + compressed.
         // Dulu memakai active_count yang ikut menghitung cache file, sehingga
         // angka RAM selalu tampak lebih tinggi dari Activity Monitor.
-        let internal = Double(stats.internal_page_count)
+        let internalPages = Double(stats.internal_page_count)
         let purgeable = Double(stats.purgeable_count)
-        let app = Swift.max(internal - purgeable, 0) * pageSize
+        let app = Swift.max(internalPages - purgeable, 0) * pageSize
         let wired = Double(stats.wire_count) * pageSize
         let compressed = Double(stats.compressor_page_count) * pageSize
         let used = app + wired + compressed
