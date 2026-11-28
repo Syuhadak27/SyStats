@@ -1,5 +1,12 @@
 import SwiftUI
 
+/// Kartu dengan latar SOLID.
+///
+/// Dulu memakai `NSVisualEffectView(.behindWindow)` di setiap kartu (5+ blur
+/// sekaligus) + `.ultraThinMaterial`. Di Hackintosh (GPU tanpa akselerasi penuh)
+/// blur "behind window" dikomposit ulang di CPU pada setiap frame scroll/resize
+/// dan setiap polling — itu penyebab utama UI terasa berat dan lambat respons.
+/// Warna solid + garis tepi tipis tampil hampir sama dan hampir tanpa biaya.
 struct Card<Content: View>: View {
     let content: Content
     var padding: CGFloat = 16
@@ -10,18 +17,17 @@ struct Card<Content: View>: View {
     }
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            #if os(macOS)
-            VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            #endif
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
-            content
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(padding)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        content
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(padding)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color(nsColor: .controlBackgroundColor))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+            )
     }
 }
 
@@ -96,7 +102,9 @@ struct StatTile: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(Color(nsColor: .controlBackgroundColor),
+        // Kartu memakai controlBackgroundColor; tile memakai windowBackgroundColor
+        // agar tetap kontras di mode terang maupun gelap.
+        .background(Color(nsColor: .windowBackgroundColor),
                     in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
@@ -112,7 +120,8 @@ struct DiagnosticsList: View {
                 .foregroundStyle(.green)
         } else {
             VStack(alignment: .leading, spacing: 6) {
-                ForEach(messages, id: \.self) { message in
+                // id = offset: pesan yang kembar tidak lagi membuat ID duplikat.
+                ForEach(Array(messages.enumerated()), id: \.offset) { _, message in
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
                         Image(systemName: "exclamationmark.triangle")
                             .foregroundStyle(.orange)

@@ -20,21 +20,19 @@ final class AppState: ObservableObject {
     private var thresholdTimer: Timer?
     private var pendingForceApply: DispatchWorkItem?
     private var powerSourceRunLoopSource: CFRunLoopSource?
+    private var lastScannedPath: String?
+    private var needsRescan = false
 
     init() {
         preferences = PreferencesStore()
         telemetry = TelemetryStore()
         thresholds = ThresholdController(preferences: preferences)
 
-        // Hanya preferensi yang diteruskan ke AppState.objectWillChange.
-        // Telemetry (2s) dan threshold (3s) publishing-Nya sengaja TIDAK
-        // diteruskan ke sini: kalau diteruskan, SETIAP tab (termasuk halaman
-        // Preferences yang sedang diedit) ikut render ulang tiap poll dan
-        // TextField terasa lag. View yang butuh telemetry/threshold mengamati
-        // objeknya langsung lewat @ObservedObject.
-        preferences.objectWillChange
-            .sink { [weak self] _ in self?.objectWillChange.send() }
-            .store(in: &cancellables)
+        // AppState HANYA mem-publish selectedTab / inspection / isScanning.
+        // Preferences, telemetry, dan threshold TIDAK diteruskan ke sini: kalau
+        // diteruskan, setiap ketikan, geseran slider, atau poll merender ulang
+        // ContentView + TabView + semua tab. View yang butuh data itu mengamati
+        // objeknya sendiri lewat @EnvironmentObject.
 
         NotificationCenter.default.addObserver(
             self, selector: #selector(handlePowerSourceChange),
@@ -57,7 +55,11 @@ final class AppState: ObservableObject {
         preferences.$efiFolderPath
             .dropFirst()
             .debounce(for: .seconds(0.4), scheduler: RunLoop.main)
-            .sink { [weak self] _ in self?.scanEFI() }
+            .sink { [weak self] path in
+                // Path hasil deteksi otomatis sudah dipindai; jangan scan dua kali.
+                guard let self, path != self.lastScannedPath else { return }
+                self.scanEFI()
+            }
             .store(in: &cancellables)
     }
 
@@ -78,9 +80,15 @@ final class AppState: ObservableObject {
     }
 
     func scanEFI() {
-        guard !isScanning else { return }
+        // Scan sedang jalan lalu path berubah: jangan dibuang diam-diam (hasil
+        // lama akan basi) — jadwalkan scan ulang setelah yang berjalan selesai.
+        guard !isScanning else {
+            needsRescan = true
+            return
+        }
         isScanning = true
         let path = preferences.efiFolderPath
+        lastScannedPath = path
         DispatchQueue.global(qos: .utility).async { [weak self] in
             let result = ACPIInspector.inspect(savedEFIPath: path)
             DispatchQueue.main.async {
@@ -88,7 +96,12 @@ final class AppState: ObservableObject {
                 self.inspection = result
                 self.isScanning = false
                 if let root = result.efiRoot, self.preferences.efiFolderPath.isEmpty {
+                    self.lastScannedPath = root.path
                     self.preferences.efiFolderPath = root.path
+                }
+                if self.needsRescan {
+                    self.needsRescan = false
+                    self.scanEFI()
                 }
             }
         }

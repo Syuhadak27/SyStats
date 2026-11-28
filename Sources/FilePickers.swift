@@ -14,12 +14,14 @@ enum FilePickers {
         return panel.runModal() == .OK ? panel.url : nil
     }
 
-    static func chooseFile() -> URL? {
+    /// `message` menjelaskan file apa yang diminta (dulu selalu "Select a PNG
+    /// asset", termasuk saat memilih executable helper).
+    static func chooseFile(message: String = "Select a file") -> URL? {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
         panel.allowsMultipleSelection = false
-        panel.message = "Select a PNG asset"
+        panel.message = message
         panel.prompt = "Choose"
         return panel.runModal() == .OK ? panel.url : nil
     }

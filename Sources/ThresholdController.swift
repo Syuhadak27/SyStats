@@ -15,6 +15,7 @@ final class ThresholdController: ObservableObject {
     ]
 
     private let preferences: PreferencesStore
+    private var isReapplying = false
     private var cancellables = Set<AnyCancellable>()
 
     init(preferences: PreferencesStore) {
@@ -78,8 +79,16 @@ final class ThresholdController: ObservableObject {
 
     /// Reapply periodik / setelah charger dicolok. Tidak menyentuh UI state,
     /// dan hanya untuk jalur ThinkVPC (helper eksternal tidak dipanggil berulang).
+    ///
+    /// @MainActor supaya state (@Published / preferences) dibaca di main thread;
+    /// penulisan ke hardware tetap dijalankan di task latar. `isReapplying`
+    /// mencegah tulisan menumpuk bila satu panggilan SMI/ACPI lebih lama dari
+    /// interval timer (default 3 detik).
+    @MainActor
     func reapply(start: Int, stop: Int) async {
-        guard canAutoReapply, let adapter = selectedAdapter else { return }
+        guard !isReapplying, canAutoReapply, let adapter = selectedAdapter else { return }
+        isReapplying = true
+        defer { isReapplying = false }
         let prefs = preferences
         await Task.detached(priority: .utility) {
             _ = await adapter.write(start: start, stop: stop, preferences: prefs)

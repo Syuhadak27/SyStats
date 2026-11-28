@@ -5,6 +5,9 @@ import Darwin
 
 /// CPU and RAM usage from Mach host statistics (no external processes).
 enum SystemMonitor {
+    /// `mach_host_self()` menambah user-reference port di SETIAP panggilan dan
+    /// tidak pernah dilepas → bocor tiap poll. Cukup ambil sekali.
+    private static let host: mach_port_t = mach_host_self()
     private static let lock = NSLock()
     private static var previousTicks: (user: Double, system: Double, idle: Double, nice: Double)?
 
@@ -15,7 +18,7 @@ enum SystemMonitor {
         )
         let status = withUnsafeMutablePointer(to: &info) { pointer -> kern_return_t in
             pointer.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { rebound in
-                host_statistics(mach_host_self(), HOST_CPU_LOAD_INFO, rebound, &count)
+                host_statistics(host, HOST_CPU_LOAD_INFO, rebound, &count)
             }
         }
         guard status == KERN_SUCCESS else { return nil }
@@ -48,7 +51,7 @@ enum SystemMonitor {
         )
         let status = withUnsafeMutablePointer(to: &stats) { pointer -> kern_return_t in
             pointer.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { rebound in
-                host_statistics64(mach_host_self(), HOST_VM_INFO64, rebound, &count)
+                host_statistics64(host, HOST_VM_INFO64, rebound, &count)
             }
         }
         guard status == KERN_SUCCESS else { return nil }
@@ -56,10 +59,16 @@ enum SystemMonitor {
         let total = Double(ProcessInfo.processInfo.physicalMemory)
         guard total > 0 else { return nil }
         let pageSize = Double(getpagesize())
-        let active = Double(stats.active_count) * pageSize
+        // Rumus yang sama dengan "Memory Used" di Activity Monitor:
+        // memori app (internal − purgeable) + wired + compressed.
+        // Dulu memakai active_count yang ikut menghitung cache file, sehingga
+        // angka RAM selalu tampak lebih tinggi dari Activity Monitor.
+        let internal = Double(stats.internal_page_count)
+        let purgeable = Double(stats.purgeable_count)
+        let app = Swift.max(internal - purgeable, 0) * pageSize
         let wired = Double(stats.wire_count) * pageSize
         let compressed = Double(stats.compressor_page_count) * pageSize
-        let used = active + wired + compressed
+        let used = app + wired + compressed
         return Swift.min(Swift.max(used / total * 100.0, 0), 100)
     }
 }

@@ -1,56 +1,43 @@
 import SwiftUI
 
+/// Dashboard dipecah menjadi kartu-kartu yang masing-masing HANYA mengamati
+/// objek yang dipakainya. Sebelumnya satu `DashboardView` besar mengamati
+/// telemetry + thresholds + appState, sehingga setiap poll (tiap 1–2 detik) dan
+/// setiap geseran slider membangun ulang SELURUH halaman (semua kartu, grid,
+/// diagnostik). Sekarang poll telemetri hanya menyentuh kartu yang menampilkan
+/// telemetri, dan slider threshold hanya menyentuh kartu threshold.
 struct DashboardView: View {
-    @EnvironmentObject private var appState: AppState
-    @EnvironmentObject private var telemetry: TelemetryStore
-    @EnvironmentObject private var thresholds: ThresholdController
-
-    private var snapshot: TelemetrySnapshot { telemetry.snapshot }
-
-    private var startBinding: Binding<Int> {
-        Binding(get: { thresholds.startPercent },
-                set: { thresholds.startPercent = $0 })
-    }
-    private var stopBinding: Binding<Int> {
-        Binding(get: { thresholds.stopPercent },
-                set: { thresholds.stopPercent = $0 })
-    }
-    private var adapterBinding: Binding<String> {
-        Binding(get: { thresholds.selectedAdapterID },
-                set: { thresholds.selectedAdapterID = $0 })
-    }
-    private var enabledBinding: Binding<Bool> {
-        Binding(get: { appState.preferences.thresholdEnabled },
-                set: {
-                    appState.preferences.thresholdEnabled = $0
-                    Task { await thresholds.apply() }
-                })
-    }
-
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                header
-                telemetryGrid
+                DashboardHeader()
+                TelemetryGridCard()
                 HStack(alignment: .top, spacing: 16) {
-                    batteryCard
-                    thresholdCard
+                    BatteryCard()
+                    ThresholdCard()
                 }
-                diagnosticsCard
+                DiagnosticsCard()
             }
             .padding(20)
         }
     }
+}
 
-    private var header: some View {
+// MARK: - Header
+
+private struct DashboardHeader: View {
+    @EnvironmentObject private var telemetry: TelemetryStore
+    @EnvironmentObject private var preferences: PreferencesStore
+
+    var body: some View {
+        let snapshot = telemetry.snapshot
         Card {
             HStack(spacing: 16) {
-                if let icon = AppBranding.icon(preferences: appState.preferences) {
+                if let icon = AppBranding.icon(preferences: preferences) {
                     icon
                         .resizable()
                         .frame(width: 58, height: 58)
                         .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
-                        .shadow(radius: 4)
                 }
                 VStack(alignment: .leading, spacing: 4) {
                     Text("SyStats")
@@ -66,32 +53,54 @@ struct DashboardView: View {
                         color: snapshot.powerSource == .ac ? .green : (snapshot.powerSource == .battery ? .orange : .gray),
                         symbol: snapshot.powerSource == .ac ? "bolt.fill" : "battery.75"
                     )
-                    Text("Updated \(snapshot.timestamp, style: .time)")
+                    // String biasa, bukan `Text(date, style: .time)` — gaya itu
+                    // memasang timer render sendiri yang terus menginvalidasi view.
+                    Text("Updated \(snapshot.timestamp.formatted(date: .omitted, time: .standard))")
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
             }
         }
     }
+}
 
-    private var telemetryGrid: some View {
+// MARK: - Live telemetry
+
+private struct TelemetryGridCard: View {
+    @EnvironmentObject private var telemetry: TelemetryStore
+    @EnvironmentObject private var preferences: PreferencesStore
+
+    private static let columns = [GridItem(.adaptive(minimum: 150), spacing: 12)]
+
+    var body: some View {
+        let snapshot = telemetry.snapshot
         Card {
             VStack(alignment: .leading, spacing: 12) {
-                SectionHeader(title: "Live telemetry", systemImage: "waveform.path.ecg", subtitle: String(format: "Polling every %.1f s", appState.preferences.pollInterval))
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
+                SectionHeader(
+                    title: "Live telemetry", systemImage: "waveform.path.ecg",
+                    subtitle: String(format: "Polling every %.1f s", preferences.pollInterval)
+                )
+                LazyVGrid(columns: Self.columns, spacing: 12) {
                     StatTile(label: "Voltage", value: snapshot.voltageText, detail: snapshot.electrical.voltageSource, accent: .cyan)
                     StatTile(label: "Current", value: snapshot.currentText, detail: snapshot.electrical.currentSource, accent: .blue)
                     StatTile(label: "Power", value: snapshot.powerText, detail: snapshot.electrical.powerSourceName, accent: .mint)
                     StatTile(label: "CPU", value: snapshot.cpuText, detail: "Mach host statistics", accent: .purple)
-                    StatTile(label: "RAM", value: snapshot.ramText, detail: "Active + wired + compressed", accent: .indigo)
+                    StatTile(label: "RAM", value: snapshot.ramText, detail: "App + wired + compressed", accent: .indigo)
                     StatTile(label: "Fan", value: snapshot.fanText, detail: snapshot.fan.source, accent: .orange)
                     StatTile(label: "Temperature", value: snapshot.temperatureText, detail: snapshot.thermal.source, accent: .red)
                 }
             }
         }
     }
+}
 
-    private var batteryCard: some View {
+// MARK: - Battery
+
+private struct BatteryCard: View {
+    @EnvironmentObject private var telemetry: TelemetryStore
+
+    var body: some View {
+        let snapshot = telemetry.snapshot
         Card {
             VStack(alignment: .leading, spacing: 12) {
                 SectionHeader(title: "Battery", systemImage: "battery.100.bolt")
@@ -116,7 +125,42 @@ struct DashboardView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private var thresholdCard: some View {
+    private func detailRow(_ label: String, value: String) -> some View {
+        HStack {
+            Text(label).font(.caption).foregroundStyle(.secondary)
+            Spacer()
+            Text(value).font(.caption.weight(.medium)).lineLimit(1)
+        }
+    }
+}
+
+// MARK: - Threshold
+
+private struct ThresholdCard: View {
+    @EnvironmentObject private var thresholds: ThresholdController
+    @EnvironmentObject private var preferences: PreferencesStore
+
+    private var startBinding: Binding<Int> {
+        Binding(get: { thresholds.startPercent },
+                set: { thresholds.startPercent = $0 })
+    }
+    private var stopBinding: Binding<Int> {
+        Binding(get: { thresholds.stopPercent },
+                set: { thresholds.stopPercent = $0 })
+    }
+    private var adapterBinding: Binding<String> {
+        Binding(get: { thresholds.selectedAdapterID },
+                set: { thresholds.selectedAdapterID = $0 })
+    }
+    private var enabledBinding: Binding<Bool> {
+        Binding(get: { preferences.thresholdEnabled },
+                set: {
+                    preferences.thresholdEnabled = $0
+                    Task { await thresholds.apply() }
+                })
+    }
+
+    var body: some View {
         Card {
             VStack(alignment: .leading, spacing: 14) {
                 SectionHeader(title: "Charge threshold", systemImage: "slider.horizontal.3", subtitle: "Desired values vs. adapter-confirmed state")
@@ -140,7 +184,7 @@ struct DashboardView: View {
                 .pickerStyle(.segmented)
                 .font(.caption)
 
-                capabilityBanner
+                CapabilityBanner()
 
                 HStack {
                     Button {
@@ -173,7 +217,7 @@ struct DashboardView: View {
                         }
                         Spacer(minLength: 0)
                     }
-                    ForEach(result.details, id: \.self) { detail in
+                    ForEach(Array(result.details.enumerated()), id: \.offset) { _, detail in
                         Text("• \(detail)")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
@@ -194,10 +238,34 @@ struct DashboardView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private var capabilityBanner: some View {
-        let capability = appState.inspection.capability
+    private func thresholdSlider(title: String, value: Binding<Int>, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack {
+                Text(title).font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Text("\(value.wrappedValue)%")
+                    .font(.caption.weight(.bold).monospacedDigit())
+                    .foregroundStyle(color)
+            }
+            Slider(value: Binding(
+                get: { Double(value.wrappedValue) },
+                set: { value.wrappedValue = Int($0.rounded()) }
+            ), in: 0...100, step: 5)
+            .tint(color)
+        }
+    }
+}
+
+/// Mengamati `AppState` (hasil inspeksi EFI) di view sendiri supaya kartu
+/// threshold tidak ikut render ulang saat scan EFI selesai, dan sebaliknya.
+private struct CapabilityBanner: View {
+    @EnvironmentObject private var appState: AppState
+
+    var body: some View {
+        let inspection = appState.inspection
+        let capability = inspection.capability
         let ok = capability.status == .available
-        return VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 8) {
                 Image(systemName: ok ? "checkmark.circle.fill" : "info.circle.fill")
                     .foregroundStyle(ok ? .green : .orange)
@@ -218,14 +286,14 @@ struct DashboardView: View {
                     Text("Adapter: \(capability.adapterID) · \(capability.displayName)")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
-                    ForEach(capability.reasons, id: \.self) { reason in
+                    ForEach(Array(capability.reasons.enumerated()), id: \.offset) { _, reason in
                         Text("• \(reason)").font(.caption2).foregroundStyle(.secondary)
                     }
-                    ForEach(capability.evidence, id: \.self) { item in
+                    ForEach(Array(capability.evidence.enumerated()), id: \.offset) { _, item in
                         Text("• \(item)").font(.caption2).foregroundStyle(.tertiary)
                     }
-                    if !appState.inspection.files.isEmpty {
-                        Text("File ACPI: \(appState.inspection.files.map(\.name).joined(separator: ", "))")
+                    if !inspection.files.isEmpty {
+                        Text("File ACPI: \(inspection.files.map(\.name).joined(separator: ", "))")
                             .font(.caption2)
                             .foregroundStyle(.tertiary)
                     }
@@ -235,14 +303,22 @@ struct DashboardView: View {
             .font(.caption2)
         }
         .padding(10)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        // Solid, bukan `.ultraThinMaterial` (blur) — jauh lebih ringan.
+        .background(Color(nsColor: .windowBackgroundColor),
+                    in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
+}
 
-    private var diagnosticsCard: some View {
+// MARK: - Diagnostics
+
+private struct DiagnosticsCard: View {
+    @EnvironmentObject private var telemetry: TelemetryStore
+
+    var body: some View {
         Card {
             VStack(alignment: .leading, spacing: 10) {
                 SectionHeader(title: "Sensor & interface diagnostics", systemImage: "stethoscope")
-                DiagnosticsList(messages: snapshot.diagnostics)
+                DiagnosticsList(messages: telemetry.snapshot.diagnostics)
                 DisclosureGroup("Why some values may be unavailable") {
                     Text("macOS does not expose a public API for charger voltage/current or direct ACPI EC method calls. Missing sensor keys are shown as “—” and explained rather than replaced with mock data. Prefix-only previews in the app are never presented as live readings.")
                         .font(.caption)
@@ -251,31 +327,6 @@ struct DashboardView: View {
                 }
                 .font(.caption)
             }
-        }
-    }
-
-    private func thresholdSlider(title: String, value: Binding<Int>, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack {
-                Text(title).font(.caption).foregroundStyle(.secondary)
-                Spacer()
-                Text("\(value.wrappedValue)%")
-                    .font(.caption.weight(.bold).monospacedDigit())
-                    .foregroundStyle(color)
-            }
-            Slider(value: Binding(
-                get: { Double(value.wrappedValue) },
-                set: { value.wrappedValue = Int($0.rounded()) }
-            ), in: 0...100, step: 5)
-            .tint(color)
-        }
-    }
-
-    private func detailRow(_ label: String, value: String) -> some View {
-        HStack {
-            Text(label).font(.caption).foregroundStyle(.secondary)
-            Spacer()
-            Text(value).font(.caption.weight(.medium)).lineLimit(1)
         }
     }
 }

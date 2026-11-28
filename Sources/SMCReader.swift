@@ -84,7 +84,14 @@ final class SMCReader {
     private let callLock = NSLock()
     private var connection: io_connect_t = 0
     private var isOpen = false
-    private var didAttemptOpen = false
+    private var lastOpenAttempt: Date?
+    /// Cache per key: tipe & ukuran (getKeyInfo hanya sekali → 1 panggilan IOKit
+    /// per pembacaan, bukan 2) dan key yang TIDAK ADA di SMC ini (tidak dicoba
+    /// lagi di setiap poll). Dulu tiap poll mencoba ±20 key, kebanyakan tidak
+    /// ada di Hackintosh, masing-masing 1–2 panggilan IOConnectCallStructMethod.
+    private var infoCache: [String: (size: UInt32, type: UInt32)] = [:]
+    private var missingKeys = Set<String>()
+    private var missingKeysResetAt = Date()
 
     private static let structSize = 80
     private static let selectorHandleYPCEvent: UInt32 = 2
@@ -101,8 +108,10 @@ final class SMCReader {
         openLock.lock()
         defer { openLock.unlock() }
         if isOpen { return true }
-        if didAttemptOpen { return false }
-        didAttemptOpen = true
+        // Gagal buka (mis. VirtualSMC belum siap saat app auto-start di login):
+        // coba lagi paling cepat 30 detik kemudian, bukan menyerah selamanya.
+        if let last = lastOpenAttempt, Date().timeIntervalSince(last) < 30 { return false }
+        lastOpenAttempt = Date()
         #if canImport(IOKit)
         let service = IOServiceGetMatchingService(
             kIOMainPortDefault,
@@ -141,9 +150,15 @@ final class SMCReader {
         return String(decoding: scalars, as: UTF8.self)
     }
 
+    private enum CallOutcome {
+        case ok([UInt8])
+        case rejected      // SMC menjawab, tetapi key tidak ada / ditolak (result != 0)
+        case failed        // IOKit gagal (transient) — jangan di-cache sebagai "tidak ada"
+    }
+
     /// Satu panggilan struct ke AppleSMC. `fill` menyiapkan input, hasil dikembalikan
-    /// sebagai buffer 80 byte atau nil bila IOKit / SMC menolak.
-    private func call(_ fill: (UnsafeMutableRawPointer) -> Void) -> [UInt8]? {
+    /// sebagai buffer 80 byte atau status gagal.
+    private func call(_ fill: (UnsafeMutableRawPointer) -> Void) -> CallOutcome {
         let size = SMCReader.structSize
         let input = UnsafeMutableRawPointer.allocate(byteCount: size, alignment: 8)
         let output = UnsafeMutableRawPointer.allocate(byteCount: size, alignment: 8)
@@ -160,10 +175,10 @@ final class SMCReader {
             connection, SMCReader.selectorHandleYPCEvent,
             input, size, output, &outputSize
         )
-        guard status == KERN_SUCCESS else { return nil }
+        guard status == KERN_SUCCESS else { return .failed }
         let buffer = (0..<size).map { output.load(fromByteOffset: $0, as: UInt8.self) }
-        guard buffer[40] == 0 else { return nil } // result != 0 → key tidak ada / ditolak
-        return buffer
+        guard buffer[40] == 0 else { return .rejected }
+        return .ok(buffer)
     }
     #endif
 
@@ -175,18 +190,42 @@ final class SMCReader {
         callLock.lock()
         defer { callLock.unlock() }
 
-        // 1) getKeyInfo → ukuran & tipe data
-        guard let info = call({ input in
-            input.storeBytes(of: keyCode, toByteOffset: 0, as: UInt32.self)
-            input.storeBytes(of: SMCReader.cmdGetKeyInfo, toByteOffset: 42, as: UInt8.self)
-        }) else { return nil }
+        // Key "tidak ada" dilupakan tiap 10 menit (mis. kext SMC baru siap belakangan).
+        if Date().timeIntervalSince(missingKeysResetAt) > 600 {
+            missingKeys.removeAll()
+            missingKeysResetAt = Date()
+        }
+        if missingKeys.contains(key) { return nil }
 
-        let dataSize = SMCReader.nativeUInt32(info, at: 28)
-        let dataType = SMCReader.nativeUInt32(info, at: 32)
-        guard dataSize > 0, dataSize <= 32 else { return nil }
+        // 1) getKeyInfo → ukuran & tipe data (di-cache)
+        let dataSize: UInt32
+        let dataType: UInt32
+        if let cached = infoCache[key] {
+            dataSize = cached.size
+            dataType = cached.type
+        } else {
+            switch call({ input in
+                input.storeBytes(of: keyCode, toByteOffset: 0, as: UInt32.self)
+                input.storeBytes(of: SMCReader.cmdGetKeyInfo, toByteOffset: 42, as: UInt8.self)
+            }) {
+            case .failed:
+                return nil
+            case .rejected:
+                missingKeys.insert(key)
+                return nil
+            case .ok(let info):
+                dataSize = SMCReader.nativeUInt32(info, at: 28)
+                dataType = SMCReader.nativeUInt32(info, at: 32)
+                guard dataSize > 0, dataSize <= 32 else {
+                    missingKeys.insert(key)
+                    return nil
+                }
+                infoCache[key] = (dataSize, dataType)
+            }
+        }
 
         // 2) readKey
-        guard let read = call({ input in
+        guard case .ok(let read) = call({ input in
             input.storeBytes(of: keyCode, toByteOffset: 0, as: UInt32.self)
             input.storeBytes(of: dataSize, toByteOffset: 28, as: UInt32.self)
             input.storeBytes(of: SMCReader.cmdReadKey, toByteOffset: 42, as: UInt8.self)

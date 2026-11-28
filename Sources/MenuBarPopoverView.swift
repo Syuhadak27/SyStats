@@ -4,6 +4,7 @@ struct MenuBarPopoverView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var telemetry: TelemetryStore
     @EnvironmentObject private var thresholds: ThresholdController
+    @EnvironmentObject private var preferences: PreferencesStore
 
     private var snapshot: TelemetrySnapshot { telemetry.snapshot }
 
@@ -45,7 +46,7 @@ struct MenuBarPopoverView: View {
 
     private var header: some View {
         HStack(spacing: 10) {
-            if let icon = AppBranding.icon(preferences: appState.preferences) {
+            if let icon = AppBranding.icon(preferences: preferences) {
                 icon.resizable().frame(width: 32, height: 32)
                     .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
             }
@@ -63,7 +64,7 @@ struct MenuBarPopoverView: View {
     }
 
     private var quickTelemetry: some View {
-        let mode = snapshot.resolvedMode(preferred: appState.preferences.menuBarMode)
+        let mode = snapshot.resolvedMode(preferred: preferences.menuBarMode)
         return VStack(spacing: 8) {
             if mode == .ac {
                 compactRow(symbol: "bolt", label: "Voltage", value: snapshot.voltageText)

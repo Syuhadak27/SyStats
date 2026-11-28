@@ -67,19 +67,22 @@ struct PreferencesView: View {
 
                 // Daftar item: checkbox aktif, label bebas, drag untuk urutan.
                 List {
-                    ForEach(Array(preferences.menuBarItems.indices), id: \.self) { index in
-                        let item = preferences.menuBarItems[index]
+                    // Berbasis ID item, BUKAN indeks. Dengan indeks, setelah item
+                    // dihapus SwiftUI sempat memanggil binding lama dengan indeks
+                    // yang sudah di luar array → crash "Index out of range", dan
+                    // urutan drag-reorder ikut kacau.
+                    ForEach(preferences.menuBarItems) { item in
                         HStack(spacing: 8) {
                             Image(systemName: "arrow.up.arrow.down.circle")
                                 .foregroundStyle(.tertiary)
                                 .help("Tarik baris untuk mengubah urutan")
-                            Toggle("", isOn: itemBinding(at: index).enabled)
+                            Toggle("", isOn: enabledBinding(for: item.id))
                                 .toggleStyle(.checkbox)
                                 .labelsHidden()
                             Image(systemName: item.kind.symbol)
                                 .foregroundStyle(.secondary)
                                 .frame(width: 18)
-                            TextField("Label (kosong = sembunyikan)", text: itemBinding(at: index).label)
+                            TextField("Label (kosong = sembunyikan)", text: labelBinding(for: item.id))
                                 .textFieldStyle(.roundedBorder)
                             Spacer(minLength: 4)
                             LiveItemValue(kind: item.kind, enabled: item.enabled)
@@ -200,12 +203,12 @@ struct PreferencesView: View {
                     title: "Application icon (icon.png)",
                     path: pathBinding(\.appIconAssetPath),
                     placeholder: "Bundled AppIcon"
-                ) { if let url = FilePickers.chooseFile() { preferences.appIconAssetPath = url.path } }
+                ) { if let url = FilePickers.chooseFile(message: "Select a PNG image for the app icon") { preferences.appIconAssetPath = url.path } }
                 assetRow(
                     title: "Menu bar icon (menu_bar.png)",
                     path: pathBinding(\.menuBarAssetPath),
                     placeholder: "Bundled MenuBarIcon (template)"
-                ) { if let url = FilePickers.chooseFile() { preferences.menuBarAssetPath = url.path } }
+                ) { if let url = FilePickers.chooseFile(message: "Select a PNG image for the menu bar icon") { preferences.menuBarAssetPath = url.path } }
                 Text("Menu bar images are forced to template rendering (monochrome) for sharp macOS rendering at any scale.")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
@@ -261,7 +264,7 @@ struct PreferencesView: View {
                     TextField("/usr/local/bin/ectool", text: helperBinding)
                         .textFieldStyle(.roundedBorder)
                     Button("Choose…") {
-                        if let url = FilePickers.chooseFile() { preferences.helperCommandPath = url.path }
+                        if let url = FilePickers.chooseFile(message: "Select the helper executable") { preferences.helperCommandPath = url.path }
                     }
                 }
                 Text("Helper dipanggil: <path> <start%> <stop%>. Exit bukan 0 = gagal. Jalur ini tidak dipanggil berulang oleh timer reapply.")
@@ -315,6 +318,15 @@ struct PreferencesView: View {
                     appState.preferences.thresholdReapplyInterval = 3.0
                     appState.preferences.thresholdAutoReapply = false
                     appState.preferences.helperCommandPath = ""
+                    // Sebelumnya TIDAK ikut di-reset: path aset kustom, adapter,
+                    // nilai threshold, ikon Dock, dan launch-at-login.
+                    appState.preferences.menuBarAssetPath = ""
+                    appState.preferences.appIconAssetPath = ""
+                    appState.preferences.hideDockIcon = false
+                    appState.preferences.launchAtLogin = false
+                    appState.thresholds.selectedAdapterID = "thinkVPC"
+                    appState.thresholds.startPercent = 75
+                    appState.thresholds.stopPercent = 85
                     appState.scanEFI()
                 }
                 .buttonStyle(.bordered)
@@ -337,30 +349,32 @@ struct PreferencesView: View {
         )
     }
 
-    /// Binding aman untuk satu item berdasarkan index. Perubahan langsung
-    /// ditulis balik ke JSON preferences dan ditandai sebagai custom.
-    private func itemBinding(at index: Int) -> (enabled: Binding<Bool>, label: Binding<String>) {
-        let enabled = Binding<Bool>(
-            get: { preferences.menuBarItems[index].enabled },
+    /// Binding aman per item berdasarkan ID. Bila item sudah terhapus saat
+    /// binding lama masih dievaluasi, getter memberi nilai netral & setter diabaikan.
+    private func enabledBinding(for id: UUID) -> Binding<Bool> {
+        Binding<Bool>(
+            get: { preferences.menuBarItems.first { $0.id == id }?.enabled ?? false },
             set: { value in
                 var items = preferences.menuBarItems
-                guard items.indices.contains(index) else { return }
+                guard let index = items.firstIndex(where: { $0.id == id }) else { return }
                 items[index].enabled = value
                 preferences.menuBarItems = items
                 preferences.markMenuBarItemsCustom()
             }
         )
-        let label = Binding<String>(
-            get: { preferences.menuBarItems[index].label },
+    }
+
+    private func labelBinding(for id: UUID) -> Binding<String> {
+        Binding<String>(
+            get: { preferences.menuBarItems.first { $0.id == id }?.label ?? "" },
             set: { value in
                 var items = preferences.menuBarItems
-                guard items.indices.contains(index) else { return }
+                guard let index = items.firstIndex(where: { $0.id == id }) else { return }
                 items[index].label = value
                 preferences.menuBarItems = items
                 preferences.markMenuBarItemsCustom()
             }
         )
-        return (enabled, label)
     }
 
     private var compactBinding: Binding<Bool> {
@@ -440,12 +454,12 @@ private struct MenuBarPreviewView: View {
                 .padding(10)
                 // Solid fill, bukan material: jauh lebih murah saat dirender
                 // ulang tiap 2 detik.
-                .background(Color(nsColor: .controlBackgroundColor),
+                .background(Color(nsColor: .windowBackgroundColor),
                             in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
         .frame(maxWidth: .infinity)
         .padding(12)
-        .background(Color(nsColor: .windowBackgroundColor).opacity(0.6),
+        .background(Color.primary.opacity(0.04),
                     in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }

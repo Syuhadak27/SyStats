@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Tab "Tentang": identitas aplikasi, versi, cek update, dan repo GitHub.
 struct AboutView: View {
-    @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var preferences: PreferencesStore
 
     private let repoURL = "https://github.com/Syuhadak27/SyStats"
     private let releaseURL = "https://github.com/Syuhadak27/SyStats/releases"
@@ -27,12 +27,11 @@ struct AboutView: View {
 
     private var hero: some View {
         VStack(spacing: 12) {
-            if let icon = AppBranding.icon(preferences: appState.preferences) {
+            if let icon = AppBranding.icon(preferences: preferences) {
                 icon
                     .resizable()
                     .frame(width: 88, height: 88)
                     .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .shadow(radius: 6)
             }
             Text("SyStats")
                 .font(.largeTitle.weight(.bold))
@@ -107,7 +106,7 @@ struct AboutView: View {
                             .foregroundStyle(.secondary)
                     }
                     .padding(10)
-                    .background(Color(nsColor: .controlBackgroundColor),
+                    .background(Color(nsColor: .windowBackgroundColor),
                                 in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
                 .buttonStyle(.plain)
@@ -128,7 +127,7 @@ struct AboutView: View {
                             .foregroundStyle(.secondary)
                     }
                     .padding(10)
-                    .background(Color(nsColor: .controlBackgroundColor),
+                    .background(Color(nsColor: .windowBackgroundColor),
                                 in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
                 .buttonStyle(.plain)

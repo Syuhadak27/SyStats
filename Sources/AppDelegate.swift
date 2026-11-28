@@ -7,6 +7,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let state = AppEnvironment.shared
         NSApp.setActivationPolicy(state.preferences.hideDockIcon ? .accessory : .regular)
         state.scanEFI()
+        // Sparkle baru mulai saat `UpdateController.shared` pertama diakses. Tanpa
+        // ini cek update otomatis 24 jam tidak berjalan sampai pengguna kebetulan
+        // membuka popover/tab Tentang.
+        _ = UpdateController.shared
         let controller = MenuBarController(appState: state)
         controller.setup()
         menuBarController = controller

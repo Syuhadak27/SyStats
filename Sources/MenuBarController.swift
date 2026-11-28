@@ -23,13 +23,10 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         // Angka lebar tetap supaya teks menu bar tidak "bergoyang" tiap update.
         button.font = NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize(for: .small), weight: .regular)
 
-        let rootView = MenuBarPopoverView()
-            .environmentObject(appState)
-            .environmentObject(appState.telemetry)
-            .environmentObject(appState.thresholds)
-        let hosting = NSHostingController(rootView: rootView)
-        hosting.preferredContentSize = NSSize(width: 330, height: 560)
-        popover.contentViewController = hosting
+        // Konten popover dibuat saat dibuka dan dibuang saat ditutup (lihat
+        // togglePopover / popoverDidClose). Dulu NSHostingController dibiarkan
+        // hidup selamanya, sehingga SwiftUI terus mengevaluasi ulang view popover
+        // tiap poll walau popover tertutup.
         popover.behavior = .transient
         popover.delegate = self
 
@@ -103,15 +100,32 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         button.setAccessibilityLabel(snapshot.menuBarAccessibilityLabel)
     }
 
+    private func makePopoverContent() -> NSViewController {
+        let rootView = MenuBarPopoverView()
+            .environmentObject(appState)
+            .environmentObject(appState.telemetry)
+            .environmentObject(appState.thresholds)
+            .environmentObject(appState.preferences)
+        let hosting = NSHostingController(rootView: rootView)
+        // Ukuran dibiarkan mengikuti isi (lebar tetap 330 di view) — tinggi 560
+        // yang dipaksa dulu menyisakan ruang kosong besar di bawah tombol.
+        return hosting
+    }
+
     @objc private func togglePopover(_ sender: Any?) {
         guard let button = statusItem.button else { return }
         if popover.isShown {
             popover.performClose(sender)
         } else {
+            popover.contentViewController = makePopoverContent()
             // App accessory/regular perlu diaktifkan agar popover menerima klik.
             NSApp.activate(ignoringOtherApps: true)
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
         }
+    }
+
+    func popoverDidClose(_ notification: Notification) {
+        popover.contentViewController = nil
     }
 }

@@ -32,25 +32,30 @@ enum TelemetryCollector {
 /// the menu bar timer never blocks the main thread with IOKit/SMC calls.
 final class TelemetryStore: ObservableObject {
     @Published private(set) var snapshot = TelemetrySnapshot()
-    @Published private(set) var isRefreshing = false
 
     private let queue = DispatchQueue(label: "com.systats.telemetry", qos: .utility)
     private var timer: Timer?
-    private var interval: TimeInterval = 2.0
-    private let lock = NSLock()
+    /// Hanya disentuh dari main thread (refresh() dan callback-nya selalu di main),
+    /// jadi tidak perlu lock. SENGAJA bukan @Published: dulu flag ini di-publish
+    /// dan berganti true/false di setiap poll, sehingga setiap view yang mengamati
+    /// store dirender ulang DUA kali per poll (sekali untuk flag, sekali untuk data).
+    private var isRefreshing = false
 
     deinit { timer?.invalidate() }
 
     func start(interval: TimeInterval) {
         stop()
         let clamped = Swift.min(Swift.max(interval, 1.0), 10.0)
-        lock.lock()
-        self.interval = clamped
-        lock.unlock()
         refresh()
-        timer = Timer.scheduledTimer(withTimeInterval: clamped, repeats: true) { [weak self] _ in
+        let newTimer = Timer(timeInterval: clamped, repeats: true) { [weak self] _ in
             self?.refresh()
         }
+        // Toleransi memberi sistem keleluasaan menggabung wake-up (hemat CPU).
+        newTimer.tolerance = clamped * 0.1
+        // Mode .default (bukan .common): selama pengguna scroll / menggeser slider
+        // timer berhenti sejenak, jadi tidak ada render ulang yang menyela gesture.
+        RunLoop.main.add(newTimer, forMode: .default)
+        timer = newTimer
     }
 
     func stop() {
@@ -58,23 +63,17 @@ final class TelemetryStore: ObservableObject {
         timer = nil
     }
 
+    /// Harus dipanggil dari main thread.
     func refresh() {
-        lock.lock()
-        let busy = isRefreshing
-        lock.unlock()
-        guard !busy else { return }
-        lock.lock()
+        guard !isRefreshing else { return }
         isRefreshing = true
-        lock.unlock()
 
         queue.async { [weak self] in
             let sample = TelemetryCollector.collect()
             DispatchQueue.main.async {
                 guard let self else { return }
-                self.snapshot = sample
-                self.lock.lock()
                 self.isRefreshing = false
-                self.lock.unlock()
+                self.snapshot = sample
             }
         }
     }
